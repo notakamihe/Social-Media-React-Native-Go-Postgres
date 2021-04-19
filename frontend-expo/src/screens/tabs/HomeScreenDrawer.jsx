@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, Touchable, TouchableOpacity } from 'react-native'
+import { View, Text, Touchable, TouchableOpacity, Linking } from 'react-native'
 import { createDrawerNavigator, DrawerItemList } from "@react-navigation/drawer";
 
 import HomeScreen from './HomeScreen';
@@ -29,9 +29,17 @@ export default function HomeScreenDrawer() {
                         style={{alignSelf: "center", marginVertical: 12}}  
                     />
                 </TouchableOpacity>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => Linking.openURL('mailto:notakamihe@gmail.com') }>
                     <Ionicons 
                         name="help-circle-outline" 
+                        color="black" 
+                        size={22} 
+                        style={{alignSelf: "center", marginVertical: 12}}  
+                    />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => props.navigation.dangerouslyGetParent().navigate("Login")}>
+                    <Ionicons 
+                        name="log-out-outline" 
                         color="black" 
                         size={22} 
                         style={{alignSelf: "center", marginVertical: 12}}  
@@ -82,7 +90,8 @@ export default function HomeScreenDrawer() {
                             size={20} 
                             style={{alignSelf: "center"}}  
                         />
-                    )
+                    ),
+                    headerShown: true
                 }}
             />
         </Drawer.Navigator>

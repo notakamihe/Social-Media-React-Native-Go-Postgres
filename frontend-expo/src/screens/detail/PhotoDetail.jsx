@@ -51,13 +51,14 @@ const PhotoDetail = (props) => {
                                     alignItems: "center"
                                 }}
                             >
-                                <View 
+                                <TouchableOpacity 
                                     style={{
                                         flexDirection: "row", 
                                         marginRight: "auto",
                                         flexShrink: 1,
                                         alignItems: "center"
                                     }}
+                                    onPress={() => props.navigation.navigate("UserDetail")}
                                 >
                                     <Avatar 
                                         size={normalize(30)} 
@@ -65,7 +66,7 @@ const PhotoDetail = (props) => {
                                         source={require("./../../../assets/images/defaultpfp.png")}
                                     />
                                     <Text style={{flexShrink: 1, marginLeft: normalize(8)}}>johndoeisgreat</Text>
-                                </View>
+                                </TouchableOpacity>
                                 <Text style={{color: "#0007", marginLeft: normalize(16)}}>Apr 17, 2017</Text>
                             </View>
                         </View>

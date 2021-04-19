@@ -31,26 +31,50 @@ const StartScreen = (props) => {
                     Onward
                 </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={{
-                backgroundColor: "#000",
-                padding: normalize(8),
-                paddingHorizontal: normalize(24),
-                borderRadius: 30,
-                width: "50%",
-                marginVertical: normalize(8)
-            }}>
-                <Text style={{ fontSize: 20, textTransform: "uppercase", color: "#fff", textAlign: "center" }}>Sign up</Text>
+            <TouchableOpacity 
+                style={{
+                    backgroundColor: "#000",
+                    padding: normalize(8),
+                    paddingHorizontal: normalize(24),
+                    borderRadius: 30,
+                    width: "50%",
+                    marginVertical: normalize(8)
+                }}
+                onPress={() => props.navigation.navigate("Register")}
+            >
+                <Text 
+                    style={{ 
+                        fontSize: normalize(20), 
+                        textTransform: "uppercase", 
+                        color: "#fff", 
+                        textAlign: "center" 
+                    }}
+                >
+                    Sign up
+                </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={{
-                borderColor: "#000",
-                borderWidth: 2,
-                padding: normalize(8),
-                paddingHorizontal: normalize(24),
-                borderRadius: 30,
-                width: "50%",
-                marginVertical: normalize(8)
-            }}>
-                <Text style={{ fontSize: normalize(20), textTransform: "uppercase", color: "#000", textAlign: "center" }}>Log in</Text>
+            <TouchableOpacity 
+                style={{
+                    borderColor: "#000",
+                    borderWidth: 2,
+                    padding: normalize(8),
+                    paddingHorizontal: normalize(24),
+                    borderRadius: 30,
+                    width: "50%",
+                    marginVertical: normalize(8)
+                }}
+            >
+                <Text 
+                    style={{ 
+                        fontSize: normalize(20), 
+                        textTransform: "uppercase", 
+                        color: "#000", 
+                        textAlign: "center" 
+                    }}
+                    onPress={() => props.navigation.navigate("Login")}
+                >
+                    Log in
+                </Text>
             </TouchableOpacity>
             <View style={{ marginTop: normalize(32), flexDirection: "row" }}>
                 <TouchableOpacity>

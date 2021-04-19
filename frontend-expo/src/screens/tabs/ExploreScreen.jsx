@@ -32,7 +32,7 @@ const ExploreScreen = (props) => {
                         <PhotoComponent navigation={props.navigation.dangerouslyGetParent()}/>
                         <StatementComponent navigation={props.navigation.dangerouslyGetParent()}/>
                         <PollComponent navigation={props.navigation.dangerouslyGetParent()}/>
-                        <View 
+                        <TouchableOpacity 
                             style={{
                                 flexDirection: "row", 
                                 alignItems: "center", 
@@ -44,6 +44,7 @@ const ExploreScreen = (props) => {
                                 maxWidth: "100%",
                                 marginVertical: normalize(16),
                             }}
+                            onPress={() => props.navigation.dangerouslyGetParent().navigate("UserDetail")}
                         >
                             <Avatar 
                                 source={require("./../../../assets/images/defaultpfp.png")}
@@ -74,8 +75,8 @@ const ExploreScreen = (props) => {
                                     </View>
                                 </View>
                             </View>
-                        </View>
-                        <View 
+                        </TouchableOpacity>
+                        <TouchableOpacity 
                             style={{
                                 flexDirection: "row", 
                                 alignItems: "center", 
@@ -87,6 +88,7 @@ const ExploreScreen = (props) => {
                                 maxWidth: "100%",
                                 marginVertical: normalize(16),
                             }}
+                            onPress={() => props.navigation.dangerouslyGetParent().navigate("UserDetail")}
                         >
                             <Avatar 
                                 source={require("./../../../assets/images/defaultpfp.png")}
@@ -117,8 +119,8 @@ const ExploreScreen = (props) => {
                                     </View>
                                 </View>
                             </View>
-                        </View>
-                        <View 
+                        </TouchableOpacity>
+                        <TouchableOpacity 
                             style={{
                                 flexDirection: "row", 
                                 alignItems: "center", 
@@ -130,6 +132,7 @@ const ExploreScreen = (props) => {
                                 maxWidth: "100%",
                                 marginVertical: normalize(16),
                             }}
+                            onPress={() => props.navigation.dangerouslyGetParent().navigate("UserDetail")}
                         >
                             <Avatar 
                                 source={require("./../../../assets/images/defaultpfp.png")}
@@ -160,7 +163,7 @@ const ExploreScreen = (props) => {
                                     </View>
                                 </View>
                             </View>
-                        </View>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </ScrollView>

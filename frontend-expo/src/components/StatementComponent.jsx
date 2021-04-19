@@ -31,7 +31,7 @@ const StatementComponent = (props) => {
             >
             met a nec senectus suspendisse a elit proin nec a condimentum fusce pulvinar a et tristique curabitur ullamcorper sem iaculis enim taciti praesent elementum sapien posuere bibendum faucibus sagittis. Id facilisis dapibus vulputate condimentum parturient nulla sociosqu odio dui ad a a pharetra eu augue df
             </Text>
-            <View style={{flexDirection: "row", marginVertical: 8}}>
+            <View style={{flexDirection: "row", marginTop: 8}}>
                 <Avatar size={20} rounded source={require("./../../assets/images/defaultpfp.png")} />
                 <Text style={{marginLeft: 16}}>johndoeisgreat {decode("&#183")} 2d</Text>
             </View>
@@ -60,7 +60,7 @@ const StatementComponent = (props) => {
                     <Popover
                         from={(
                             <TouchableOpacity 
-                                style={{flexDirection: "row", alignItems: "center", marginHorizontal: 6}}
+                                style={{flexDirection: "row", alignItems: "center", marginHorizontal: 6, padding: normalize(8)}}
                                 onPress={() => setVisible(true)}
                             >
                                 <Ionicons name="ellipsis-horizontal-outline" size={18} color="#000"/>
@@ -82,7 +82,7 @@ const StatementComponent = (props) => {
                             style={{marginVertical: normalize(8)}} 
                             onPress={() => { 
                                 if (props.navigation) {
-                                    navigate(props.navigation, "EditStatementTouchableOpacity") 
+                                    navigate(props.navigation, "EditStatement") 
                                     setVisible(false)
                                 }
                             }}

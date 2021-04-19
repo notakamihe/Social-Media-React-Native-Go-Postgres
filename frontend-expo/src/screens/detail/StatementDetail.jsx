@@ -82,14 +82,22 @@ const StatementDetail = (props) => {
                         </View>
                     </View>
                     <View style={{flexDirection: "row", marginVertical: normalize(16), alignItems: "center"}}>
-                        <View style={{flexDirection: "row", marginRight: "auto", alignItems: "center", flexShrink: 1}}>
+                        <TouchableOpacity 
+                            style={{
+                                flexDirection: "row", 
+                                marginRight: "auto",
+                                flexShrink: 1,
+                                alignItems: "center"
+                            }}
+                            onPress={() => props.navigation.navigate("UserDetail")}
+                        >
                             <Avatar 
-                                source={require("./../../.././assets/images/defaultpfp.png")}
-                                rounded
-                                
+                                size={normalize(30)} 
+                                rounded 
+                                source={require("./../../../assets/images/defaultpfp.png")}
                             />
-                            <Text style={{marginLeft: normalize(16), flexShrink: 1}}>johndoeisgreat</Text>
-                        </View>
+                            <Text style={{flexShrink: 1, marginLeft: normalize(8)}}>johndoeisgreat</Text>
+                        </TouchableOpacity>
                         <Text style={{marginLeft: normalize(16), color: "#0007"}}>May 1, 2017</Text>
                     </View>
                     <View style={{alignItems: "center", paddingVertical: normalize(16), width: "100%"}}>

@@ -77,7 +77,7 @@ const PollComponent = (props) => {
                         <Popover
                             from={(
                                 <TouchableOpacity 
-                                    style={{flexDirection: "row", alignItems: "center", marginHorizontal: 6}}
+                                    style={{flexDirection: "row", alignItems: "center", marginHorizontal: 6, padding: normalize(8)}}
                                     onPress={() => setVisible(true)}
                                 >
                                     <Ionicons name="ellipsis-horizontal-outline" size={18} color="#000"/>

@@ -47,13 +47,14 @@ const VideoDetail = (props) => {
                                     alignItems: "center"
                                 }}
                             >
-                                <View 
+                                <TouchableOpacity 
                                     style={{
                                         flexDirection: "row", 
                                         marginRight: "auto",
                                         flexShrink: 1,
                                         alignItems: "center"
                                     }}
+                                    onPress={() => props.navigation.navigate("UserDetail")}
                                 >
                                     <Avatar 
                                         size={normalize(30)} 
@@ -61,7 +62,7 @@ const VideoDetail = (props) => {
                                         source={require("./../../../assets/images/defaultpfp.png")}
                                     />
                                     <Text style={{flexShrink: 1, marginLeft: normalize(8)}}>johndoeisgreat</Text>
-                                </View>
+                                </TouchableOpacity>
                                 <TouchableOpacity 
                                     style={{
                                         marginLeft: normalize(16),  

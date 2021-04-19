@@ -1,56 +1,51 @@
 import React, { useState } from 'react'
-import { View, Text } from 'react-native'
+import { View, Text, TouchableOpacity } from 'react-native'
 import { Avatar, normalize } from 'react-native-elements'
-import { ScrollView, TouchableOpacity } from 'react-native-gesture-handler';
+import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from "react-native-vector-icons/Ionicons";
 import numeral from "numeral"
 
 const data = [
     {option: "Los Angeles Lakers", votes: 1000},
-    {option: "Minnesota Timberwolves", votes: 200},
-    {option: "Oklahoma City Thunder", votes: 700},
-    {option: "Golden State Warriors", votes: 600},
-    {option: "Milwaukee Bucks", votes: 800},
-    {option: "Brooklyn Nets", votes: 1200},
-    {option: "Philadelphia 76ers", votes: 400},
-    {option: "Miami Heats", votes: 900},
+    {option: "Minnesota Timberwolves", votes: 400},
+    {option: "Oklahoma City Thunder", votes: 600},
+    {option: "Golden State Warriors", votes: 500}
 ]
 
-const PollDetail = () => {
+const PollDetail = (props) => {
     const [pollData, setPollData] = useState(data.sort((a, b) => b.votes - a.votes))
     const [isFavorited, setIsFavorited] = useState(false)
-    const [pollOptionIdx, setPollOptionIdx] = useState(-1)
 
     const getTotalVotes = () => {
         return pollData.map(o => o.votes).reduce((accumulator, currentValue) => accumulator + currentValue)
     }
 
     const PollBar = (props) => {
-        const pollColor = props.option.selected ? "#56f" : `rgba(0, 0, 0, ${(1 - (props.pos + 1) / data.length) + 0.25})`
+        const pollOptionColor = props.option.selected ? "#56f" : `rgba(0, 0, 0, ${(1 - (props.pos + 1) / data.length) + (1 / data.length)})`
 
         return (
-            <View style={{marginLeft: normalize(8)}}>
-                <Text style={{color: pollColor}}>
+            <View style={{marginLeft: normalize(24)}}>
+                <Text style={{color: pollOptionColor}}>
                     {props.option.option}
                 </Text>
-                <View style={{flexDirection: "row", alignItems: "center", marginLeft: normalize(16)}}>
+                <View style={{flexDirection: "row", alignItems: "center", marginLeft: normalize(16), marginRight: normalize(128)}}>
                     <View 
                         style={{
                             height: normalize(35), 
                             width: `${props.option.votes / getTotalVotes() * 100}%`,
-                            backgroundColor: pollColor,
+                            backgroundColor: pollOptionColor,
                             marginVertical: 4,
                             borderRadius: 0,
                             alignItems: "flex-end",
                             justifyContent: "center",
-                            padding: 5
+                            padding: 5,
                         }}
                     >
                     </View>
                     <Text 
                         style={{
-                            color: pollColor,
+                            color: pollOptionColor,
                             fontWeight: "bold", 
                             fontSize: normalize(14),
                             minWidth: 20,
@@ -105,8 +100,8 @@ const PollDetail = () => {
                         Id facilisis dapibus vulputate condimentum parturient nulla sociosqu odio dui ad a a pharetra eu augue molestie sodales euismod condimentum dignissim himenaeos adipiscing a sem adipiscing. A porta parturient id parturient nunc ad.
                         </Text>
                     </View>
-                    <View style={{marginVertical: 16, flexDirection: "row", paddingHorizontal: 8}}>
-                        <View style={{flex: 0.8}}>
+                    <View style={{marginVertical: normalize(16), flexDirection: "row"}}>
+                        <View>
                             {
                                 pollData.map((o, idx) => (
                                     <TouchableOpacity key={idx} onPress={() => updateVotes(idx)}>
@@ -115,17 +110,25 @@ const PollDetail = () => {
                                 ))
                             }
                         </View>
-                        <View style={{flex: 0.2}}></View>
                     </View>
                     <View style={{paddingHorizontal: normalize(16)}}>
                         <View style={{flexDirection: "row", alignItems: "center", marginVertical: normalize(16)}}>
-                            <View style={{flexDirection: "row", alignItems: "center", marginRight: "auto", flexShrink: 1}}>
+                            <TouchableOpacity 
+                                style={{
+                                    flexDirection: "row", 
+                                    marginRight: "auto",
+                                    flexShrink: 1,
+                                    alignItems: "center"
+                                }}
+                                onPress={() => props.navigation.navigate("UserDetail")}
+                            >
                                 <Avatar 
+                                    size={normalize(30)} 
+                                    rounded 
                                     source={require("./../../../assets/images/defaultpfp.png")}
-                                    rounded
                                 />
-                                <Text style={{marginLeft: normalize(16), flexShrink: 1}}>johndoeisgreat</Text>
-                            </View>
+                                <Text style={{flexShrink: 1, marginLeft: normalize(8)}}>johndoeisgreat</Text>
+                            </TouchableOpacity>
                             <TouchableOpacity 
                                 onPress={() => setIsFavorited(prev => !prev)} 
                             >

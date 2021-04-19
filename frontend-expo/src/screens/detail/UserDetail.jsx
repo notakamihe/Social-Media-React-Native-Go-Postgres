@@ -1,22 +1,21 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { View, Text, Dimensions, Image } from 'react-native'
 import { Avatar } from "react-native-elements";
 import { ScrollView, TouchableOpacity } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { normalize } from '../../utils/utils';
-import VideoComponent from '../../components/VideoComponent';
-import PhotoComponent from '../../components/PhotoComponent';
-import StatementComponent from '../../components/StatementComponent';
-import PollComponent from '../../components/PollComponent';
 import { flag } from "country-emoji";
+import { VideoComponent, PhotoComponent, PollComponent, StatementComponent } from '../../components';
 
-const HomeScreen = (props) => {
+const UserDetail = (props) => {
+    const [isFollowed, setIsFollowed] = useState(false)
+
     return (
         <SafeAreaView style={{flex: 1}}>
-            <ScrollView style={{paddingHorizontal: 16}}>
-                <View style={{alignItems: "center", paddingVertical: normalize(48), paddingBottom: normalize(96)}}>
-                    <View style={{marginTop: 16, flexDirection: "row"}}>
+            <ScrollView style={{paddingHorizontal: 16, marginTop: normalize(-16)}}>
+                <View style={{alignItems: "center", paddingVertical: normalize(32), p16addingBottom: normalize(32)}}>
+                    <View style={{flexDirection: "row"}}>
                         <Avatar 
                             source={require("./../../../assets/images/defaultpfp.png")} 
                             size={70} 
@@ -25,10 +24,13 @@ const HomeScreen = (props) => {
                         />
                         <View style={{marginLeft: 16}}>
                             <View style={{flexDirection: "row"}}>
-                                <View style={{flexDirection: "row", alignItems: "center", marginRight: 8}}>
-                                    <Ionicons name="people-outline" size={18} />
+                                <TouchableOpacity 
+                                    style={{flexDirection: "row", alignItems: "center", marginRight: 8}}
+                                    onPress={() => setIsFollowed(prev => !prev)}
+                                >
+                                    <Ionicons name={isFollowed ? "people" : "people-outline"} size={18} />
                                     <Text style={{marginLeft: normalize(4), fontWeight: "bold"}}>146K</Text>
-                                </View>
+                                </TouchableOpacity>
                                 <View style={{flexDirection: "row", alignItems: "center", marginRight: 8}}>
                                     <Ionicons name="arrow-forward-outline" size={18} />
                                     <Text style={{marginLeft: normalize(4), fontWeight: "bold"}}>132K</Text>
@@ -38,9 +40,34 @@ const HomeScreen = (props) => {
                                 <Ionicons name="calendar-outline" size={18} color="#0005" />
                                 <Text style={{marginLeft: normalize(4), fontWeight: "bold", color: "#0005"}}>Mar 29, 2017</Text>
                             </View>
-                            <View style={{flexDirection: "row", alignItems: "center"}}>
-                                <Ionicons name="eye-outline" size={18} color="#000"/>
-                                <Text style={{marginLeft: normalize(4), fontWeight: "bold", color: "#000"}}>3M</Text>
+                            <View style={{flexDirection: "row"}}>
+                                <View 
+                                    style={{flexDirection: "row", alignItems: "center", marginHorizontal: normalize(4)}}>
+                                    <Ionicons name="eye-outline" size={18} color="#000"/>
+                                    <Text 
+                                        style={{marginLeft: normalize(4), fontWeight: "bold", color: "#000"}}
+                                    >
+                                        3M
+                                    </Text>
+                                </View>
+                                <View 
+                                    style={{flexDirection: "row", alignItems: "center", marginHorizontal: normalize(4)}}>
+                                    <Ionicons name="heart-outline" size={18} color="#000"/>
+                                    <Text 
+                                        style={{marginLeft: normalize(4), fontWeight: "bold", color: "#000"}}
+                                    >
+                                        5M
+                                    </Text>
+                                </View>
+                                <View 
+                                    style={{flexDirection: "row", alignItems: "center", marginHorizontal: normalize(4)}}>
+                                    <Ionicons name="chatbox-outline" size={18} color="#000"/>
+                                    <Text 
+                                        style={{marginLeft: normalize(4), fontWeight: "bold", color: "#000"}}
+                                    >
+                                        400K
+                                    </Text>
+                                </View>
                             </View>
                         </View>
                     </View>
@@ -48,7 +75,7 @@ const HomeScreen = (props) => {
                     <Text>{flag("US")}</Text>
                     <TouchableOpacity 
                         style={{marginTop: 16 }}
-                        onPress={() => props.navigation.dangerouslyGetParent().navigate("Description")}
+                        onPress={() => props.navigation.navigate("Description")}
                     >
                         <Text numberOfLines={8} style={{color: "#0008", fontWeight: "bold", textAlign: "center"}}>
                             Amet a nec senectus suspendisse a elit proin nec a condimentum fusce pulvinar a et 
@@ -69,13 +96,13 @@ const HomeScreen = (props) => {
                             fontSize: normalize(20)
                         }}
                     >
-                        Favorites
+                        Posts (4)
                     </Text>
                     <View style={{alignItems: "center"}}>
-                        <VideoComponent navigation={props.navigation.dangerouslyGetParent()} />
-                        <PhotoComponent navigation={props.navigation.dangerouslyGetParent()}/>
-                        <StatementComponent navigation={props.navigation.dangerouslyGetParent()}/>
-                        <PollComponent navigation={props.navigation.dangerouslyGetParent()}/>
+                        <VideoComponent navigation={props.navigation} />
+                        <PhotoComponent navigation={props.navigation}/>
+                        <StatementComponent navigation={props.navigation}/>
+                        <PollComponent navigation={props.navigation}/>
                     </View>
                 </View>
             </ScrollView>
@@ -83,4 +110,4 @@ const HomeScreen = (props) => {
     )
 }
 
-export default HomeScreen
+export default UserDetail

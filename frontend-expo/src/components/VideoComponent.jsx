@@ -36,7 +36,7 @@ const VideoComponent = (props) => {
             >
                 This is the title of my amazing video
             </Text>
-            <View style={{flexDirection: "row", marginVertical: 4}}>
+            <View style={{flexDirection: "row", marginTop: 4}}>
                 <Avatar size={20} rounded source={require("./../../assets/images/defaultpfp.png")} />
                 <Text style={{marginLeft: 16}}>johndoeisgreat {decode("&#183")} 2d</Text>
             </View>
@@ -65,7 +65,7 @@ const VideoComponent = (props) => {
                     <Popover
                         from={(
                             <TouchableOpacity 
-                                style={{flexDirection: "row", alignItems: "center", marginHorizontal: 6}}
+                                style={{flexDirection: "row", alignItems: "center", marginHorizontal: 6, padding: normalize(8)}}
                                 onPress={() => setVisible(true)}
                             >
                                 <Ionicons name="ellipsis-horizontal-outline" size={18} color="#000"/>
