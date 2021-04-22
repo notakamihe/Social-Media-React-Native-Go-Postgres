@@ -55,7 +55,7 @@ func signUp(w http.ResponseWriter, r *http.Request) {
 		utils.RespondWStatus(w, 400, "Date of birth must not be blank.")
 		return
 	} else {
-		matched, err := regexp.Match(`^\d{4}\-(0[1-9]|1[012])\-(0[1-9]|[12][0-9]|3[01])`, []byte(user.Dob))
+		matched, err := regexp.Match(`^[12]\d{3}\-(0[1-9]|1[012])\-(0[1-9]|[12][0-9]|3[01])`, []byte(user.Dob))
 
 		if err != nil || !matched {
 			utils.RespondWStatus(w, 400, "Invalid date of birth format (Must be YYYY-MM-DD).")

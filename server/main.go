@@ -27,6 +27,8 @@ func main() {
 	if err = database.DB.Ping(); err != nil {
 		fmt.Println("Could not connect to postgres database.")
 		log.Fatal(err)
+	} else {
+		fmt.Println("Connected to PostgreSQL database successfully")
 	}
 
 	headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})

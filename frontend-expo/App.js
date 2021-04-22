@@ -10,10 +10,13 @@ import { PhotoDetail, PollDetail, StatementDetail, UserDetail, VideoDetail } fro
 import RegisterScreen from './src/screens/forms/RegisterScreen'
 import LoginScreen from './src/screens/forms/LoginScreen'
 import { normalize } from './src/utils/utils'
+import axios from "axios"
 
 const Stack = createStackNavigator()
 
 export default function App() {
+    axios.defaults.baseURL = "http://localhost:9000/"
+
     return (
         <NavigationContainer>
             <Stack.Navigator initialRouteName="Start">

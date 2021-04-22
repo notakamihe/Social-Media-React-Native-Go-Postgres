@@ -76,5 +76,5 @@ func deletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode("Post/ deleted.")
+	json.NewEncoder(w).Encode("Post deleted.")
 }
