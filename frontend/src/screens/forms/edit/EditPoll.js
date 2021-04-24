@@ -5,8 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import FormError from '../../../components/FormError'
 import { normalize } from '../../../utils/utils'
 import Ionicons from "react-native-vector-icons/Ionicons";
+import axios from 'axios'
 
-const EditPoll = () => {
+const EditPoll = (props) => {
+    const [poll, setPoll] = useState(props.route.params.poll)
+    const [pollOptions, setPollOptions] = useState([])
     const [title, setTitle] = useState("")
     const [description, setDescription] = useState("")
     const [options, setOptions] = useState([
@@ -18,20 +21,16 @@ const EditPoll = () => {
     const errorRef = useRef()
 
     useEffect(() => {
-        const data = [
-            {label: "Cats"},
-            {label: "Dogs"},
-        ]
+        setTitle(poll.title)
+        setDescription(poll.description)
 
-        setTitle("Cats or Dogs?")
-        setDescription("The pressing issues that more people need to be discussing: felines or canines?")
-        setOptions(data)
+        axios.get(axios.defaults.baseURL + `poll-options/poll/${poll.id}`).then(res => {
+            setPollOptions(res.data)
+            setOptions(res.data);
+        }).catch(err => {
+            console.log(err);
+        })
     }, [])
-
-    useEffect(() => {
-        if (error)
-            errorRef.current.scrollToEnd({animated: true})
-    }, [error])
 
     const addOption = () => {
         const newOption = {
@@ -41,9 +40,60 @@ const EditPoll = () => {
         setOptions(prev => [...prev, newOption])
     }
 
-    const editPoll = () => {
-        console.log(title, description)
-        setError("this is an error")
+    const editPoll = async () => {
+        let pollResponse
+
+        setError("")
+        
+        if (!options.every(o => o.label)) {
+            setError("All poll choices must not be blank")
+            errorRef.current.scrollToEnd({animated: true})
+            return
+        }
+
+        try {
+            pollResponse = await axios.put(axios.defaults.baseURL + `polls/${poll.post_id}`, {
+                title,
+                description
+            })
+        } catch (err) {
+            setError(err.response.data)
+            errorRef.current.scrollToEnd({animated: true})
+            return
+        }
+
+        pollOptions.forEach(async o => {
+            if (options.map(o => o.ID).includes(o.ID)) {
+                await axios.put(axios.defaults.baseURL + `poll-options/${o.ID}`, {
+                    pollid: poll.id,
+                    label: options.find(x => x.ID == o.ID).label
+                }).catch(err => {
+                    console.log(err);
+                })
+            } else {
+                await axios.delete(axios.defaults.baseURL + `poll-options/${o.ID}`).catch(err => {
+                    console.log(res.data);
+                })
+            }
+        })
+
+        options.forEach(async o => {
+            if (!o.ID) {
+                await axios.post(axios.defaults.baseURL + "poll-options", {
+                    pollid: poll.id,
+                    label: o.label
+                }).catch(err => {
+                    console.log(err);
+                })
+            }
+        })
+
+        axios.get(axios.defaults.baseURL + `posts/${poll.post_id}`).then(res => {
+            console.log(res.data);
+            props.navigation.navigate("PollDetail", {poll: res.data})
+        }).catch(err => {
+            console.log(err);
+        })
     }
 
     const setOptionContent = (idx, v) => {
@@ -160,7 +210,7 @@ const EditPoll = () => {
                         <Text 
                             style={{textTransform: "uppercase", fontWeight: "bold", fontSize: normalize(18)}}
                         >
-                            Create
+                            Edit
                         </Text>
                     </TouchableOpacity>
                     <FormError msg={error} />

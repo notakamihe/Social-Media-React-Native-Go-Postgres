@@ -1,26 +1,26 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { View, Text, Image, Dimensions, TouchableOpacity } from 'react-native'
 import { ScrollView, TextInput } from 'react-native-gesture-handler'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import FormError from '../../../components/FormError'
 import { normalize } from '../../../utils/utils'
 import Ionicons from "react-native-vector-icons/Ionicons";
+import axios from "axios"
+import {UserContext} from "./../../../context/UserContext"
 
-const CreatePoll = () => {
+const CreatePoll = (props) => {
+    const {user, setUser} = useContext(UserContext)
+
     const [title, setTitle] = useState("")
     const [description, setDescription] = useState("")
     const [options, setOptions] = useState([
         {label: ""},
         {label: ""}
     ])
+
     const [error, setError] = useState("")
 
     const errorRef = useRef()
-
-    useEffect(() => {
-        if (error)
-            errorRef.current.scrollToEnd({animated: true})
-    }, [error])
 
     const addOption = () => {
         const newOption = {
@@ -30,9 +30,51 @@ const CreatePoll = () => {
         setOptions(prev => [...prev, newOption])
     }
 
-    const createPoll = () => {
-        console.log(title, description)
-        setError("this is an error")
+    const createPoll = async () => {
+        let pollResponse
+
+        setError("")
+        
+        if (!options.every(o => o.label)) {
+            setError("All poll choices must not be blank")
+            errorRef.current.scrollToEnd({animated: true})
+            return
+        }
+
+        try {
+            pollResponse = await axios.post(axios.defaults.baseURL + "polls", {
+                userid: user.id,
+                title,
+                description
+            })
+        } catch (err) {
+            setError(err.response.data)
+            errorRef.current.scrollToEnd({animated: true})
+            return
+        }
+
+        options.forEach(async o => {
+            let pollOptionResponse 
+
+            try {
+                pollOptionResponse = await axios.post(axios.defaults.baseURL + "poll-options", {
+                    pollid: pollResponse.data.ID,
+                    label: o.label
+                })
+
+            } catch (err) {
+                console.log(err);
+            }
+
+            console.log(pollOptionResponse.data);
+        })
+
+        axios.get(axios.defaults.baseURL + `posts/${pollResponse.data.postid}`).then(res => {
+            console.log(res.data);
+            props.navigation.navigate("PollDetail", {poll: res.data})
+        }).catch(err => {
+            console.log(err);
+        })
     }
 
     const setOptionContent = (idx, v) => {

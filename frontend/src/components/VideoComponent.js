@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { View, Text, Dimensions, Image, Touchable, TouchableOpacity } from 'react-native'
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { navigate, normalize } from '../utils/utils';
+import { normalize, timeAgoShort } from '../utils/utils';
 import { decode } from 'html-entities';
 import { Avatar } from 'react-native-elements';
 import Popover from 'react-native-popover-view';
@@ -10,7 +10,18 @@ import axios from 'axios';
 
 const VideoComponent = (props) => {
     const widthPercentage = props.widthPercentage || 0.9
+
     const [visible, setVisible] = useState(false)
+    const [videoUser, setVideoUser] = useState({})
+
+    useEffect(() => {
+        if (props.video)
+            axios.get(axios.defaults.baseURL + `users/${props.video.post.userid}`).then(res => {
+                setVideoUser(res.data);
+            }).catch(err => {
+                console.log(err);
+            })
+    }, [])
 
     const deleteVideo = () => {
         axios.delete(axios.defaults.baseURL + `posts/${props.video.post_id}`).then(res => {
@@ -81,7 +92,8 @@ const VideoComponent = (props) => {
                 >
                     <Avatar size={normalize(20)} rounded source={require("./../../assets/images/defaultpfp.png")} />
                     <Text style={{marginLeft: 16, fontSize: normalize(16)}}>
-                        johndoeisgreat {decode("&#183")} 2d
+                        {videoUser.username} {decode("&#183") + " "} 
+                        {props.video ? timeAgoShort(props.video.post.createdon) : ""}
                     </Text>
                 </View>
             }
@@ -158,6 +170,7 @@ const VideoComponent = (props) => {
                         <TouchableOpacity 
                             style={{marginVertical: normalize(8)}} 
                             onPress={() => { 
+                                setVisible(false)
                                 props.navigation.navigate("EditVideo", {
                                     video: props.video
                                 })

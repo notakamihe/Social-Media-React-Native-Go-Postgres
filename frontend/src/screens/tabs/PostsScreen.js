@@ -10,11 +10,12 @@ import axios from 'axios';
 
 const PostsScreen = (props) => {
     const [posts, setPosts] = useState([])
-    const {user, setUser} = useContext(UserContext)
+    const [filteredPosts, setFilteredPosts] = useState([])
+    const [selectedPostType, setSelectedPostType] = useState("")
+    const [selectedSort, setSelectedSort] = useState("")
+    const [searchText, setSearchText] = useState("")
 
-    useEffect(() => {
-        getPosts()
-    }, [props.route.params])
+    const {user, setUser} = useContext(UserContext)
 
     useEffect(() => {
         const onFocus = props.navigation.addListener("focus", () => {
@@ -24,12 +25,52 @@ const PostsScreen = (props) => {
         return onFocus;
     }, [props.navigation]);
 
+    const filterByPostType = (v, data) => {
+        setSelectedPostType(v)
+
+        switch (v) {
+            case "":
+            case "all":
+                setFilteredPosts(data)
+                break
+            case "videos":
+                setFilteredPosts(data.filter(p => p.post.category == "video"))
+                break
+            case "photos":
+                setFilteredPosts(data.filter(p => p.post.category == "photo"))
+                break
+            case "statements":
+                setFilteredPosts(data.filter(p => p.post.category == "statement"))
+                break
+            case "polls":
+                setFilteredPosts(data.filter(p => p.post.category == "poll"))
+                break
+        }
+    }
+
     const getPosts = () => {
         axios.get(axios.defaults.baseURL + "posts").then(res => {
-            setPosts(res.data.filter(p => p.post.userid == user.id));
+            const postsData = res.data.filter(p => p.post.userid == user.id).sort((a, b) => new Date(b.post.createdon) - new Date(a.post.createdon))
+            setPosts(postsData);
+            filterByPostType(selectedPostType, postsData)
         }).catch(err => {
             console.log(err);
         })
+    }
+
+    const sortBy = (v, data) => {
+        setSelectedSort(v)
+
+        switch (v) {
+            case "recent":
+                setFilteredPosts(filteredPosts.sort((a, b) => new Date(b.post.createdon) - new Date(a.post.createdon)))
+                break
+            case "popular":
+                break
+            case "oldest":
+                setFilteredPosts(filteredPosts.sort((a, b) => new Date(a.post.createdon) - new Date(b.post.createdon)))
+                break
+        }
     }
 
     return (
@@ -59,6 +100,8 @@ const PostsScreen = (props) => {
                         }}
                         placeholder="Search"
                         placeholderTextColor="#0004"
+                        onChangeText={text => setSearchText(text)}
+                        value={searchText}
                     />
                     <View 
                         style={{
@@ -70,17 +113,26 @@ const PostsScreen = (props) => {
                         }}
                     >
                         <View style={{borderWidth: 2, borderColor: "#000", borderRadius: 15, marginHorizontal: 8, flex: 0.5}}>
-                            <Picker selectedValue="videos" mode="dropdown" style={{fontSize: normalize(16)}}>
+                            <Picker 
+                                selectedValue={selectedPostType}
+                                mode="dropdown" 
+                                style={{fontSize: normalize(16)}}
+                                onValueChange={(v, i) => filterByPostType(v, posts)}
+                            >
                                 <Picker.Item label="All" value="all"/>
                                 <Picker.Item label="Videos" value="videos"/>
                                 <Picker.Item label="Photos" value="photos"/>
                                 <Picker.Item label="Statements" value="statements"/>
-                                <Picker.Item label="Polls" value="Polls"/>
+                                <Picker.Item label="Polls" value="polls"/>
                             </Picker>
                         </View>
                         
                         <View style={{borderWidth: 2, borderColor: "#000", borderRadius: 15, marginHorizontal: 8, flex: 0.5}}>
-                            <Picker selectedValue="recent" mode="dropdown">
+                            <Picker 
+                                selectedValue={selectedSort} 
+                                mode="dropdown"
+                                onValueChange={(v, i) => sortBy(v, posts)}
+                            >
                                 <Picker.Item label="Recent" value="recent" />
                                 <Picker.Item label="Popular" value="popular" />
                                 <Picker.Item label="Oldest" value="oldest" />
@@ -89,29 +141,64 @@ const PostsScreen = (props) => {
                     </View>
                     <View style={{alignItems: "center"}}>
                         {
-                            posts.map((p, idx) => {
-                                if (p.post.category == "statement") {
-                                    return (
-                                        <StatementComponent 
-                                            key={idx} 
-                                            hideUser 
-                                            showOptions 
-                                            navigation={props.navigation.dangerouslyGetParent()} 
-                                            statement={p}
-                                            getPosts={getPosts}
-                                        />
-                                    )
-                                } else if (p.post.category == "video") {
-                                    return (
-                                        <VideoComponent 
-                                            key={idx} 
-                                            hideUser 
-                                            showOptions 
-                                            navigation={props.navigation.dangerouslyGetParent()} 
-                                            video={p}
-                                            getPosts={getPosts}
-                                        />
-                                    )
+                            filteredPosts.map((p, idx) => {
+                                switch (p.post.category) {
+                                    case "statement":
+                                        if (p.content.toLowerCase().includes(searchText.toLowerCase()))
+                                            return (
+                                                <StatementComponent 
+                                                    key={idx} 
+                                                    hideUser 
+                                                    showOptions 
+                                                    navigation={props.navigation.dangerouslyGetParent()} 
+                                                    statement={p}
+                                                    getPosts={getPosts}
+                                                />
+                                            )
+
+                                        return null
+                                    case "video":
+                                        if (p.title.toLowerCase().includes(searchText.toLowerCase()))
+                                            return (
+                                                <VideoComponent 
+                                                    key={idx} 
+                                                    hideUser 
+                                                    showOptions 
+                                                    navigation={props.navigation.dangerouslyGetParent()} 
+                                                    video={p}
+                                                    getPosts={getPosts}
+                                                />
+                                            )
+
+                                        return null
+                                    case "photo":
+                                        if (p.title.toLowerCase().includes(searchText.toLowerCase()))
+                                            return (
+                                                <PhotoComponent 
+                                                    key={idx} 
+                                                    hideUser 
+                                                    showOptions 
+                                                    navigation={props.navigation.dangerouslyGetParent()} 
+                                                    photo={p}
+                                                    getPosts={getPosts}
+                                                />
+                                            )
+
+                                        return null
+                                    case "poll":
+                                        if (p.title.toLowerCase().includes(searchText.toLowerCase()))
+                                            return (
+                                                <PollComponent 
+                                                    key={idx} 
+                                                    hideUser 
+                                                    showOptions 
+                                                    navigation={props.navigation.dangerouslyGetParent()} 
+                                                    poll={p}
+                                                    getPosts={getPosts}
+                                                />
+                                            )
+
+                                        return null
                                 }
 
                                 return null

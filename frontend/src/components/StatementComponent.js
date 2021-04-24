@@ -1,6 +1,6 @@
-import React, {useContext, useState} from 'react'
+import React, {useContext, useEffect, useState} from 'react'
 import { View, Text, Dimensions, Image, TouchableOpacity } from 'react-native'
-import { navigate, normalize } from '../utils/utils'
+import { normalize, timeAgoShort } from '../utils/utils'
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { Avatar } from 'react-native-elements';
 import {decode} from "html-entities";
@@ -9,6 +9,17 @@ import axios from 'axios';
 
 const StatementComponent = (props) => {
     const [visible, setVisible] = useState(false)
+
+    const [statementUser, setStatementUser] = useState({})
+
+    useEffect(() => {
+        if (props.statement)
+            axios.get(axios.defaults.baseURL + `users/${props.statement.post.userid}`).then(res => {
+                setStatementUser(res.data);
+            }).catch(err => {
+                console.log(err);
+            })
+    }, [])
 
     const deleteStatement = () => {
         axios.delete(axios.defaults.baseURL + `posts/${props.statement.post_id}`).then(res => {
@@ -43,6 +54,7 @@ const StatementComponent = (props) => {
                     textAlign: "center",
                     fontStyle: "italic"
                 }}
+                numberOfLines={8}
             >
             {props.statement ? props.statement.content : null}
             </Text>
@@ -58,7 +70,8 @@ const StatementComponent = (props) => {
                 >
                     <Avatar size={normalize(20)} rounded source={require("./../../assets/images/defaultpfp.png")} />
                     <Text style={{marginLeft: 16, fontSize: normalize(16)}}>
-                        johndoeisgreat {decode("&#183")} 2d
+                        {statementUser.username} {decode("&#183") + " "} 
+                        {props.statement ? timeAgoShort(props.statement.post.createdon) : ""}
                     </Text>
                 </View>
             }
@@ -136,6 +149,7 @@ const StatementComponent = (props) => {
                         <TouchableOpacity 
                             style={{marginVertical: normalize(8)}} 
                             onPress={() => { 
+                                setVisible(false)
                                 props.navigation.navigate("EditStatement", {
                                     statement: props.statement
                                 })

@@ -19,15 +19,22 @@ const StatementDetail = (props) => {
     const {user, setUser} = useContext(UserContext)
 
     useEffect(() => {
+        const navigationRoutes = props.navigation.dangerouslyGetState().routes
+        const prevNavigationName = navigationRoutes[navigationRoutes.length - 2]["name"]
+
         props.navigation.setOptions({
             headerLeft: () => (
                 <TouchableOpacity 
                     style={{marginLeft: normalize(16)}}
-                    onPress={() => props.navigation.navigate("Tabs")}
+                    onPress={() => prevNavigationName == "CreateStatement" || prevNavigationName == "EditStatement" ? 
+                        props.navigation.navigate("Tabs") : 
+                        props.navigation.goBack()
+                    }
                 >
                     <Ionicons name="arrow-back-sharp" size={normalize(25)} />
                 </TouchableOpacity>
-            )
+            ),
+            title: `${statementUser.username || ""}:  ${statement.content}`
         })
     })
 

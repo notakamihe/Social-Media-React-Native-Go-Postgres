@@ -1,39 +1,107 @@
-import React, { useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { View, Text, TouchableOpacity } from 'react-native'
 import { Avatar, normalize } from 'react-native-elements'
 import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from "react-native-vector-icons/Ionicons";
 import numeral from "numeral"
-
-const data = [
-    {option: "Los Angeles Lakers", votes: 1000},
-    {option: "Minnesota Timberwolves", votes: 400},
-    {option: "Oklahoma City Thunder", votes: 600},
-    {option: "Golden State Warriors", votes: 500}
-]
+import axios from 'axios';
+import moment from "moment"
+import {UserContext} from "./../../context/UserContext"
 
 const PollDetail = (props) => {
-    const [pollData, setPollData] = useState(data.sort((a, b) => b.votes - a.votes))
+    const {user, setUser} = useContext(UserContext)
+
+    const [poll, setPoll] = useState(props.route.params.poll)
+    const [pollUser, setPollUser] = useState({})
+    const [pollOptions, setPollOptions] = useState([])
+
     const [isFavorited, setIsFavorited] = useState(false)
 
+    useEffect(() => {
+        const navigationRoutes = props.navigation.dangerouslyGetState().routes
+        const prevNavigationName = navigationRoutes[navigationRoutes.length - 2]["name"]
+
+        props.navigation.setOptions({
+            headerLeft: () => (
+                <TouchableOpacity 
+                    style={{marginLeft: normalize(16)}}
+                    onPress={() => prevNavigationName == "CreatePoll" || prevNavigationName == "EditPoll" ? 
+                        props.navigation.navigate("Tabs") : 
+                        props.navigation.goBack()
+                    }
+                >
+                    <Ionicons name="arrow-back-sharp" size={normalize(25)} />
+                </TouchableOpacity>
+            ),
+            title: `${pollUser.username || ""}:  ${poll.title}`
+        })
+    })
+
+    useEffect(() => {
+        axios.get(axios.defaults.baseURL + `users/${poll.post.userid}`).then(res => {
+            setPollUser(res.data)
+        }).catch(err => {
+            console.log(err);
+        })
+
+        getPollOptions()
+    }, [props.route.params.poll])
+
+    const deletePoll = () => {
+        axios.delete(axios.defaults.baseURL + `posts/${poll.post_id}`).then(res => {
+            console.log(res.data);
+            props.navigation.navigate("Tabs")
+        }).catch(err => {
+            console.log(err);
+        })
+    }
+
+    const getPollOptions = async () => {
+        setPollOptions([])
+
+        axios.get(axios.defaults.baseURL + `poll-options/poll/${poll.id}`).then(async res => {
+            for (var i = 0; i < res.data.length; i++) {
+                let votes 
+                
+                try {
+                    votes = (await axios.get(axios.defaults.baseURL + "votes")).data
+                } catch (err) {
+                    console.log(err);
+                }
+                
+                res.data[i]["votes"] = votes ? votes.filter(v => v.polloptionid == res.data[i].ID) : []
+            }
+            
+            setPollOptions(res.data.sort((a, b) => b.votes.length - a.votes.length));
+        })
+    }
+
     const getTotalVotes = () => {
-        return pollData.map(o => o.votes).reduce((accumulator, currentValue) => accumulator + currentValue)
+        let sum = 0
+
+        pollOptions.forEach(o => sum += o.votes.length)
+        return sum
+    }
+
+    const isSelected = (option) => {
+        return option.votes.map(v => v.userid).includes(user.id)
     }
 
     const PollBar = (props) => {
-        const pollOptionColor = props.option.selected ? "#56f" : `rgba(0, 0, 0, ${(1 - (props.pos + 1) / data.length) + (1 / data.length)})`
+        const pollOptionColor = props.selected ? "#56f" : `rgba(0, 0, 0, ${(1 - (props.pos + 1) / pollOptions.length) + (1 / pollOptions.length)})`
+        const percentage = props.option.votes.length / getTotalVotes() * 100
 
         return (
             <View style={{marginLeft: normalize(24)}}>
                 <Text style={{color: pollOptionColor, fontSize: normalize(16)}}>
-                    {props.option.option}
+                    {props.option.label}
                 </Text>
                 <View style={{flexDirection: "row", alignItems: "center", marginLeft: normalize(16), marginRight: normalize(128)}}>
                     <View 
                         style={{
                             height: normalize(35), 
-                            width: `${props.option.votes / getTotalVotes() * 100}%`,
+                            width: `${percentage}%`,
                             backgroundColor: pollOptionColor,
                             marginVertical: 4,
                             borderRadius: 0,
@@ -52,34 +120,44 @@ const PollDetail = (props) => {
                             marginLeft: 5
                         }}
                     >
-                        {numeral((props.option.votes / getTotalVotes()) * 100).format("0.[0]")}%
+                        {numeral(percentage).format("0.[0]")}%
                     </Text>
                 </View>
             </View>
         )
     }
 
-    const updateVotes = (idx) => {
-        const newPollData = [...pollData]
-        let deselect = false
+    const vote = (option) => {
+        if (isSelected(option)) {
+            axios.delete(axios.defaults.baseURL + `votes/${option.ID}/${user.id}`).then(res => {
+                console.log(res.data);
+                getPollOptions()
+            }).catch(err => {
+                console.log(err);
+            })
 
-        for (let i = 0; i < newPollData.length; i++) {
-            if (newPollData[i].selected) {
-                newPollData[i].selected = false
-                newPollData[i].votes -= 1
+            return
+        }
 
-                if (i == idx) {
-                    deselect = true
-                }
+        pollOptions.filter(o => o.ID != option.ID).forEach(o => {
+            if (isSelected(o)) {
+                axios.delete(axios.defaults.baseURL + `votes/${o.ID}/${user.id}`).then(res => {
+                    console.log(res.data);
+                }).catch(err => {
+                    console.log(err);
+                })
             }
-        }
+        })
 
-        if (!deselect) {
-            newPollData[idx]["selected"] = true
-            newPollData[idx].votes += 1
-        }
-
-        setPollData(newPollData.sort((a, b) => b.votes - a.votes))
+        axios.post(axios.defaults.baseURL + "votes", {
+            polloptionid: option.ID,
+            userid: user.id
+        }).then(res => {
+            console.log(res.data);
+            getPollOptions()
+        }).catch(err => {
+            console.log(err);
+        })
     }
 
     return (
@@ -94,7 +172,7 @@ const PollDetail = (props) => {
                                 fontSize: normalize(20)
                             }}
                         >
-                            Favorite team of the four
+                            {poll.title}
                         </Text>
                         <Text 
                             style={{
@@ -103,15 +181,15 @@ const PollDetail = (props) => {
                                 fontSize: normalize(16)
                             }}
                         >
-                        Id facilisis dapibus vulputate condimentum parturient nulla sociosqu odio dui ad a a pharetra eu augue molestie sodales euismod condimentum dignissim himenaeos adipiscing a sem adipiscing. A porta parturient id parturient nunc ad.
+                            {poll.description}
                         </Text>
                     </View>
                     <View style={{marginVertical: normalize(16), flexDirection: "row"}}>
                         <View>
                             {
-                                pollData.map((o, idx) => (
-                                    <TouchableOpacity key={idx} onPress={() => updateVotes(idx)}>
-                                        <PollBar barColor="#000" option={o} pos={idx} />
+                                pollOptions.map((o, idx) => (
+                                    <TouchableOpacity key={idx} onPress={() => vote(o)}>
+                                        <PollBar barColor="#000" option={o} pos={idx} selected={isSelected(o)} />
                                     </TouchableOpacity>
                                 ))
                             }
@@ -136,7 +214,7 @@ const PollDetail = (props) => {
                                 <Text 
                                     style={{flexShrink: 1, marginLeft: normalize(8), fontSize: normalize(16)}}
                                 >
-                                    johndoeisgreat
+                                    {pollUser.username}
                                 </Text>
                             </TouchableOpacity>
                             <View style={{flexDirection: "row"}}>
@@ -145,10 +223,10 @@ const PollDetail = (props) => {
                                         name="create-outline" 
                                         size={normalize(25)} 
                                         color="#000"
-                                        onPress={() => props.navigation.navigate("EditPoll")}
+                                        onPress={() => props.navigation.navigate("EditPoll", {poll: poll})}
                                     />
                                 </TouchableOpacity>
-                                <TouchableOpacity>
+                                <TouchableOpacity onPress={() => deletePoll()}>
                                     <Ionicons name="trash-outline" size={normalize(25)} color="#000"/>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
@@ -162,7 +240,9 @@ const PollDetail = (props) => {
                             <Text style={{marginRight: "auto", fontWeight: "bold", fontSize: normalize(16)}}>
                                 {getTotalVotes()} votes
                             </Text>
-                            <Text style={{color: "#0007", fontSize: normalize(16)}}>June 26, 2017</Text>
+                            <Text style={{color: "#0007", fontSize: normalize(16)}}>
+                                {moment(poll.post.createdon).format("MMM DD, YYYY")}
+                            </Text>
                         </View>
                     </View>
                 </View>

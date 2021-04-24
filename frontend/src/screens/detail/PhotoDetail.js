@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { View, Text, TouchableOpacity, Dimensions } from 'react-native'
 import Ionicons from "react-native-vector-icons/Ionicons"
 import {Avatar, normalize} from "react-native-elements"
@@ -6,15 +6,125 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AutoHeightImage from "react-native-auto-height-image";
 import { decode } from 'html-entities';
+import moment from "moment"
+import axios from 'axios';
+import { UserContext } from '../../context/UserContext';
 
 const PhotoDetail = (props) => {
+    const {user, setUser} = useContext(UserContext)
+
+    const [photo, setPhoto] = useState(props.route.params.photo)
+    const [photoUser, setPhotoUser] = useState({})
+
     const [showComments, setShowComments] = useState(false)
-    const [isLiked, setIsLiked] = useState(false)
     const [isCommentedOn, setIsCommentedOn] = useState(false)
+
+    const [likes, setLikes] = useState([])
     const [isFavorited, setIsFavorited] = useState(true)
-    const [isPrivate, setIsPrivate] = useState(true)
 
     const commentRef = useRef()
+
+    useEffect(() => {
+        const navigationRoutes = props.navigation.dangerouslyGetState().routes
+        const prevNavigationName = navigationRoutes[navigationRoutes.length - 2]["name"]
+
+        props.navigation.setOptions({
+            headerLeft: () => (
+                <TouchableOpacity 
+                    style={{marginLeft: normalize(16)}}
+                    onPress={() => prevNavigationName == "CreatePhoto" || prevNavigationName == "EditPhoto" ? 
+                        props.navigation.navigate("Tabs") : 
+                        props.navigation.goBack()
+                    }
+                >
+                    <Ionicons name="arrow-back-sharp" size={normalize(25)} />
+                </TouchableOpacity>
+            ),
+            title: `${photoUser.username || ""}:  ${photo.title}`
+        })
+    })
+
+    useEffect(() => {
+        axios.get(axios.defaults.baseURL + `users/${photo.post.userid}`).then(res => {
+            setPhoto(props.route.params.photo)
+            setPhotoUser(res.data)
+        }).catch(err => {
+            console.log(err);
+        })
+
+        getLikes()
+        getFavorite()
+    }, [props.route.params.photo])
+
+    const deletePhoto = () => {
+        axios.delete(axios.defaults.baseURL + `posts/${photo.post_id}`).then(res => {
+            console.log(res.data);
+            props.navigation.navigate("Tabs")
+        }).catch(err => {
+            console.log(err);
+        })
+    }
+
+    const getFavorite = () => {
+        axios.get(axios.defaults.baseURL + `favorites/${photo.post_id}/${user.id}`).then(res => {
+            console.log(res.data);
+            setIsFavorited(true)
+        }).catch(err => {
+            setIsFavorited(false)
+        })
+    }
+
+    const getLikes = () => {
+        axios.get(axios.defaults.baseURL + "likes").then(res => {
+            setLikes(res.data ? res.data.filter(l => l.postid == photo.post_id) : []);
+        }).catch(err => {
+            console.log(err);
+        })
+    }
+    const isLiked = () => {
+        return likes.map(l => l.userid).includes(user.id);
+    }
+
+    const toggleFavorite = () => {
+        if (isFavorited)
+            axios.delete(axios.defaults.baseURL + `favorites/${photo.post_id}/${user.id}`).then(res => {
+                console.log(res.data);
+                getFavorite()
+            }).catch(err => {
+                console.log(err.response.data);
+            })
+        else
+            axios.post(axios.defaults.baseURL + "favorites", {
+                postid: photo.post_id,
+                userid: user.id
+            }).then(res => {
+                console.log(res.data);
+                getFavorite()
+            }).catch(err => {
+                console.log(err);
+            })
+    }
+
+    const toggleLike = () => {
+        if (isLiked())
+            axios.delete(axios.defaults.baseURL + `likes/${photo.post_id}/${user.id}`).then(res => {
+                console.log(res.data);
+                getLikes()
+            }).catch(err => {
+                console.log(err.response.data);
+            })
+        else
+            axios.post(axios.defaults.baseURL + "likes", {
+                postid: photo.post_id,
+                userid: user.id
+            }).then(res => {
+                console.log(res.data);
+                getLikes()
+            }).catch(err => {
+                console.log(err);
+            })
+    }
+
 
     const viewCommentOrCreate = () => {
         if (isCommentedOn) {
@@ -31,6 +141,12 @@ const PhotoDetail = (props) => {
                 <ScrollView>
                     <View style={{width: "100%", marginVertical: normalize(32)}}>
                         <View style={{width: "100%"}}>
+                            <Ionicons 
+                                name={photo.private ? "lock-closed" : "lock-open-outline"} 
+                                size={normalize(15)} 
+                                color="#000"
+                                style={{alignSelf: "center", marginBottom: normalize(8)}}
+                            />
                             <Text 
                                 style={{
                                     fontSize: normalize(18), 
@@ -39,7 +155,7 @@ const PhotoDetail = (props) => {
                                     marginHorizontal: normalize(16)
                                 }}
                             >
-                                This will be the placeholder title of the image
+                                {photo.title}
                             </Text>
                             <View 
                                 style={{
@@ -71,19 +187,19 @@ const PhotoDetail = (props) => {
                                             fontSize: normalize(16)
                                         }}
                                     >
-                                        johndoeisgreat
+                                        {photoUser.username}
                                     </Text>
                                 </TouchableOpacity>
                                 <Text 
                                     style={{color: "#0007", marginLeft: normalize(16), fontSize: normalize(16)}}
                                 >
-                                    Apr 17, 2017
+                                    {moment(photo.post.createdon).format("MMM DD, YYYY")}
                                 </Text>
                             </View>
                         </View>
                         <View>
                             <AutoHeightImage
-                                source={require("./../../../assets/images/image-placeholder.png")}
+                                source={{uri: axios.defaults.baseURL + photo.fileurl}}
                                 resizeMode="contain"
                                 width={Dimensions.get("window").width}
                                 style={{
@@ -93,26 +209,6 @@ const PhotoDetail = (props) => {
                                     borderWidth: 2,
                                 }}
                             />
-                            <View 
-                                style={{
-                                    position: "absolute",
-                                    top: normalize(8),
-                                    right: normalize(8),
-                                    zIndex: 300,
-                                    flexDirection: "row"
-                                }}
-                            >
-                                <Ionicons 
-                                    name={isPrivate ? "lock-closed-outline" : "lock-open-outline"} 
-                                    size={20} 
-                                    color="#000" 
-                                />
-                                <TouchableOpacity 
-                                    onPress={() => setIsFavorited(prev => !prev)} 
-                                >
-                                    <Ionicons name={isFavorited ? "star" : "star-outline"} size={20} color="#000" />
-                                </TouchableOpacity>
-                            </View>
                         </View>
                         <View 
                             style={{
@@ -123,7 +219,15 @@ const PhotoDetail = (props) => {
                             <View style={{flexDirection: "row", flexGrow: 1}}>
                                 <View style={{flexDirection: "row", alignItems: "center", marginHorizontal: normalize(6)}}>
                                     <Ionicons name="eye-outline" size={normalize(16)}/>
-                                    <Text style={{marginLeft: normalize(4), fontWeight: "bold"}}>700K</Text>
+                                    <Text 
+                                        style={{
+                                            marginLeft: normalize(4), 
+                                            fontWeight: "bold",
+                                            fontSize: normalize(16)
+                                        }}
+                                    >
+                                        700K
+                                    </Text>
                                 </View>
                                 <TouchableOpacity 
                                     style={{
@@ -131,10 +235,18 @@ const PhotoDetail = (props) => {
                                         alignItems: "center", 
                                         marginHorizontal: normalize(6)
                                     }}
-                                    onPress={() => setIsLiked(prev => !prev)}
+                                    onPress={() => toggleLike()}
                                 >
-                                    <Ionicons name={isLiked ? "heart" : "heart-outline"} size={normalize(16)}/>
-                                    <Text style={{marginLeft: normalize(4), fontWeight: "bold"}}>50K</Text>
+                                    <Ionicons name={isLiked() ? "heart" : "heart-outline"} size={normalize(16)}/>
+                                    <Text 
+                                        style={{
+                                            marginLeft: normalize(4), 
+                                            fontWeight: "bold",
+                                            fontSize: normalize(16)
+                                        }}
+                                    >
+                                        {likes.length}
+                                    </Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
                                     style={{
@@ -145,7 +257,15 @@ const PhotoDetail = (props) => {
                                     onPress={() => viewCommentOrCreate()}
                                 >
                                     <Ionicons name={isCommentedOn ? "chatbox" : "chatbox-outline"} size={normalize(16)}/>
-                                    <Text style={{marginLeft: normalize(4), fontWeight: "bold"}}>8K</Text>
+                                    <Text 
+                                        style={{
+                                            marginLeft: normalize(4), 
+                                            fontWeight: "bold",
+                                            fontSize: normalize(16)
+                                        }}
+                                    >
+                                        8K
+                                    </Text>
                                 </TouchableOpacity>
                                 <View 
                                     style={{
@@ -155,23 +275,31 @@ const PhotoDetail = (props) => {
                                         marginLeft: "auto"
                                     }}
                                 >
-                                    <TouchableOpacity>
+                                    <TouchableOpacity 
+                                        onPress={() => props.navigation.navigate("EditPhoto", {
+                                            photo: photo
+                                        })}
+                                    >
                                         <Ionicons 
                                             name="create-outline" 
                                             size={normalize(25)} 
                                             color="#000"
-                                            onPress={() => props.navigation.navigate("EditPhoto")}
                                         />
                                     </TouchableOpacity>
-                                    <TouchableOpacity>
+                                    <TouchableOpacity onPress={() => deletePhoto()}>
                                         <Ionicons name="trash-outline" size={normalize(25)} color="#000"/>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity 
+                                        onPress={() => toggleFavorite()} 
+                                    >
+                                        <Ionicons name={isFavorited ? "star" : "star-outline"} size={normalize(25)} color="#000" />
                                     </TouchableOpacity>
                                 </View>
                             </View>
                         </View>
                         <View style={{padding: normalize(16)}}>
                             <Text style={{textAlign: "center", fontSize: normalize(16)}}>
-                                Amet a nec senectus suspendisse a elit proin nec a condimentum fusce pulvinar a et tristique curabitur ullamcorper sem iaculis enim taciti praesent elementum sapien posuere bibendum faucibus sagittis.
+                                {photo.description}
                             </Text>
                         </View>
                     </View>

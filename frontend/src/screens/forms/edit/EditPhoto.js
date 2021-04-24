@@ -1,24 +1,30 @@
+import axios from 'axios'
 import React, { useEffect, useRef, useState } from 'react'
 import { View, Text, Image, Dimensions, TouchableOpacity } from 'react-native'
 import AutoHeightImage from 'react-native-auto-height-image'
 import { CheckBox } from 'react-native-elements'
 import { ScrollView, TextInput } from 'react-native-gesture-handler'
+import { launchImageLibrary } from 'react-native-image-picker'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import FormError from '../../../components/FormError'
 import { normalize } from '../../../utils/utils'
 
-const EditPhoto = () => {
+const EditPhoto = (props) => {
+    const [photo, setPhoto] = useState(props.route.params.photo)
+
     const [title, setTitle] = useState("")
     const [description, setDescription] = useState("")
     const [isPrivate, setIsPrivate] = useState(false)
+    const [photoUri, setPhotoUri] = useState(null)
+
     const [error, setError] = useState("")
 
     const errorRef = useRef()
 
     useEffect(() => {
-        setTitle("The title to edited")
-        setDescription("The description to be edited in detail")
-        setIsPrivate(true)
+        setTitle(photo.title)
+        setDescription(photo.description)
+        setIsPrivate(photo.private)
     }, [])
 
     useEffect(() => {
@@ -26,13 +32,66 @@ const EditPhoto = () => {
             errorRef.current.scrollToEnd({animated: true})
     }, [error])
 
-    const editPhoto = () => {
-        console.log(title, description, isPrivate)
-        setError("this is an error")
+    const editPhoto = async () => {
+        let photoResponse
+        let formData = new FormData()
+
+        setError("")
+
+        try {
+            photoResponse = await axios.put(axios.defaults.baseURL + `photos/${photo.post_id}`, {
+                title,
+                description,
+                private: isPrivate
+            })
+        } catch (err) {
+            setError(err.response.data)
+            errorRef.current.scrollToEnd({animated: true})
+            return
+        }
+
+        if (photoUri) {
+            try {
+                formData.append("file", {
+                    uri: photoUri,
+                    name: photoUri.split("/")[photoUri.split("/").length - 1],
+                    type: `image/${photoUri.substring(photoUri.lastIndexOf(".") + 1)}`
+                })   
+    
+                await axios({
+                    method: "put",
+                    url: axios.defaults.baseURL + `photos/${photo.post_id}/file`,
+                    data: formData,
+                    headers: { "Content-Type": "multipart/form-data" }
+                })
+            } catch (err) {
+                setError(err.response.data)
+                errorRef.current.scrollToEnd({animated: true})
+                return
+            }
+        }
+
+        axios.get(axios.defaults.baseURL + `posts/${photo.post_id}`).then(res => {
+            console.log(res.data);
+            props.navigation.navigate("PhotoDetail", {photo: res.data})
+        }).catch(err => {
+            console.log(err);
+        })
     }
 
-    const openPicker = async (mediaType) => {
+    const openPicker = () => {
+        const options = {
+            mediaType: "photo"
+        }
+
+        launchImageLibrary(options, response => {
+            if (!response.didCancel && response.uri) {
+                setPhotoUri(response.uri)
+            }
+        })
     }
+
+    console.log(photo);
 
     return (
         <SafeAreaView>
@@ -55,11 +114,9 @@ const EditPhoto = () => {
                     />
                     <View style={{position: "relative"}}>
                         <AutoHeightImage
-                            source={require("./../../../../assets/images/image-placeholder.png")} 
+                            source={{uri: photoUri || axios.defaults.baseURL + photo.fileurl}} 
                             width={Dimensions.get("window").width}
-                        >
-                            
-                        </AutoHeightImage>
+                        />
                         <TouchableOpacity
                             style={{
                                 position: "absolute",
@@ -68,7 +125,8 @@ const EditPhoto = () => {
                                 padding: 8,
                                 borderWidth: 1,
                                 borderColor: "#000",
-                                borderRadius: 30
+                                borderRadius: 30,
+                                backgroundColor: "#fff"
                             }}
                         >
                             <Text 

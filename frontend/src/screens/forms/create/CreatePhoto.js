@@ -1,31 +1,89 @@
-import React, { useEffect, useRef, useState } from 'react'
+import axios from 'axios'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { View, Text, Image, Dimensions, TouchableOpacity } from 'react-native'
 import AutoHeightImage from 'react-native-auto-height-image'
 import { CheckBox } from 'react-native-elements'
 import { ScrollView, TextInput } from 'react-native-gesture-handler'
+import { launchImageLibrary } from 'react-native-image-picker'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import FormError from '../../../components/FormError'
+import { UserContext } from '../../../context/UserContext'
 import { normalize } from '../../../utils/utils'
 
-const CreatePhoto = () => {
+const CreatePhoto = (props) => {
+    const {user, setUser} = useContext(UserContext)
+
     const [title, setTitle] = useState("")
     const [description, setDescription] = useState("")
     const [isPrivate, setIsPrivate] = useState(false)
+    const [photoUri, setPhotoUri] = useState("")
+
     const [error, setError] = useState("")
 
     const errorRef = useRef()
 
-    useEffect(() => {
-        if (error)
-            errorRef.current.scrollToEnd({animated: true})
-    }, [error])
+    const createPhoto = async () => {
+        let photoResponse
+        let formData = new FormData()
 
-    const createPhoto = () => {
-        console.log(title, description, isPrivate)
-        setError("this is an error")
+        setError("")
+        
+        if (!photoUri) {
+            setError("Must provide a photo.")
+            errorRef.current.scrollToEnd({animated: true})
+            return
+        }
+
+        try {
+            photoResponse = await axios.post(axios.defaults.baseURL + "photos", {
+                userid: user.id,
+                title,
+                description,
+                private: isPrivate
+            })
+        } catch (err) {
+            setError(err.response.data)
+            errorRef.current.scrollToEnd({animated: true})
+            return
+        }
+
+        try {
+            formData.append("file", {
+                uri: photoUri,
+                name: photoUri.split("/")[photoUri.split("/").length - 1],
+                type: `image/${photoUri.substring(photoUri.lastIndexOf(".") + 1)}`
+            })   
+
+            await axios({
+                method: "put",
+                url: axios.defaults.baseURL + `photos/${photoResponse.data.postid}/file`,
+                data: formData,
+                headers: { "Content-Type": "multipart/form-data" }
+            })
+        } catch (err) {
+            setError(err.response.data)
+            errorRef.current.scrollToEnd({animated: true})
+            return
+        }
+
+        axios.get(axios.defaults.baseURL + `posts/${photoResponse.data.postid}`).then(res => {
+            console.log(res.data);
+            props.navigation.navigate("PhotoDetail", {photo: res.data})
+        }).catch(err => {
+            console.log(err);
+        })
     }
 
-    const openPicker = async (mediaType) => {
+    const openPicker = async () => {
+        const options = {
+            mediaType: "photo"
+        }
+
+        launchImageLibrary(options, response => {
+            if (!response.didCancel && response.uri) {
+                setPhotoUri(response.uri)
+            }
+        })
     }
 
     return (
@@ -49,11 +107,12 @@ const CreatePhoto = () => {
                     />
                     <View style={{position: "relative"}}>
                         <AutoHeightImage
-                            source={require("./../../../../assets/images/image-placeholder.png")} 
+                            source={
+                                photoUri ? {uri: photoUri} :
+                                require("./../../../../assets/images/image-placeholder.png")
+                            } 
                             width={Dimensions.get("window").width}
-                        >
-                            
-                        </AutoHeightImage>
+                        />
                         <TouchableOpacity
                             style={{
                                 position: "absolute",
@@ -62,7 +121,8 @@ const CreatePhoto = () => {
                                 padding: 8,
                                 borderWidth: 1,
                                 borderColor: "#000",
-                                borderRadius: 30
+                                borderRadius: 30,
+                                backgroundColor: "#fff"
                             }}
                         >
                             <Text 

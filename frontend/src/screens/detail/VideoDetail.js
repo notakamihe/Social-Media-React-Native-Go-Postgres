@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { View, Text, TouchableOpacity, Dimensions } from 'react-native'
 import Ionicons from "react-native-vector-icons/Ionicons"
 import {Avatar, normalize} from "react-native-elements"
@@ -9,31 +9,41 @@ import { decode } from 'html-entities';
 import Video from "react-native-video"
 import moment from "moment"
 import axios from 'axios';
+import { UserContext } from "./../../context/UserContext";
 
 const VideoDetail = (props) => {
+    const {user, setUser} = useContext(UserContext)
+
     const [video, setVideo] = useState(props.route.params.video || {})
     const [videoUser, setVideoUser] = useState({})
     const [height, setHeight] = useState(Dimensions.get("window").width * 9 / 16)
 
     const [showThumbnail, setShowThumbnail] = useState(false)
     const [showComments, setShowComments] = useState(false)
-    const [isLiked, setIsLiked] = useState(false)
-    const [isCommentedOn, setIsCommentedOn] = useState(false)
+
+    const [likes, setLikes] = useState([])
     const [isFavorited, setIsFavorited] = useState(true)
-    const [isPrivate, setIsPrivate] = useState(false)
+    const [isCommentedOn, setIsCommentedOn] = useState(false)
 
     const commentRef = useRef()
 
     useEffect(() => {
+        const navigationRoutes = props.navigation.dangerouslyGetState().routes
+        const prevNavigationName = navigationRoutes[navigationRoutes.length - 2]["name"]
+
         props.navigation.setOptions({
             headerLeft: () => (
                 <TouchableOpacity 
                     style={{marginLeft: normalize(16)}}
-                    onPress={() => props.navigation.navigate("Tabs")}
+                    onPress={() => prevNavigationName == "CreateVideo" || prevNavigationName == "EditVideo" ? 
+                        props.navigation.navigate("Tabs") : 
+                        props.navigation.goBack()
+                    }
                 >
                     <Ionicons name="arrow-back-sharp" size={normalize(25)} />
                 </TouchableOpacity>
-            )
+            ),
+            title: `${videoUser.username || ""}:  ${video.title}`
         })
     })
 
@@ -48,6 +58,9 @@ const VideoDetail = (props) => {
             console.log(err);
         })
 
+        getLikes()
+        getFavorite()
+
         setShowThumbnail(false)
     }, [props.route.params.video])
 
@@ -60,6 +73,67 @@ const VideoDetail = (props) => {
         })
     }
 
+    const getFavorite = () => {
+        axios.get(axios.defaults.baseURL + `favorites/${video.post_id}/${user.id}`).then(res => {
+            console.log(res.data);
+            setIsFavorited(true)
+        }).catch(err => {
+            setIsFavorited(false)
+        })
+    }
+
+    const getLikes = () => {
+        axios.get(axios.defaults.baseURL + "likes").then(res => {
+            setLikes(res.data ? res.data.filter(l => l.postid == video.post_id) : []);
+        }).catch(err => {
+            console.log(err);
+        })
+    }
+
+    const toggleFavorite = () => {
+        if (isFavorited)
+            axios.delete(axios.defaults.baseURL + `favorites/${video.post_id}/${user.id}`).then(res => {
+                console.log(res.data);
+                getFavorite()
+            }).catch(err => {
+                console.log(err.response.data);
+            })
+        else
+            axios.post(axios.defaults.baseURL + "favorites", {
+                postid: video.post_id,
+                userid: user.id
+            }).then(res => {
+                console.log(res.data);
+                getFavorite()
+            }).catch(err => {
+                console.log(err);
+            })
+    }
+
+    const toggleLike = () => {
+        if (isLiked())
+            axios.delete(axios.defaults.baseURL + `likes/${video.post_id}/${user.id}`).then(res => {
+                console.log(res.data);
+                getLikes()
+            }).catch(err => {
+                console.log(err.response.data);
+            })
+        else
+            axios.post(axios.defaults.baseURL + "likes", {
+                postid: video.post_id,
+                userid: user.id
+            }).then(res => {
+                console.log(res.data);
+                getLikes()
+            }).catch(err => {
+                console.log(err);
+            })
+    }
+
+    const isLiked = () => {
+        return likes.map(l => l.userid).includes(user.id);
+    }
+
     const viewCommentOrCreate = () => {
         if (isCommentedOn) {
             setShowComments(true)
@@ -68,13 +142,19 @@ const VideoDetail = (props) => {
             props.navigation.navigate("CreateComment")
         }
     }
-    
+
     return (
         <SafeAreaView style={{flex: 1}}>
             <View style={{flex: 12, borderBottomWidth: 1}}>
                 <ScrollView>
                     <View style={{width: "100%", marginTop: normalize(16)}}>
                         <View style={{width: "100%"}}>
+                            <Ionicons 
+                                name={video.private ? "lock-closed" : "lock-open"} 
+                                size={normalize(15)} 
+                                color="#000"
+                                style={{alignSelf: "center", marginBottom: normalize(8)}}
+                            />
                             <Text 
                                 style={{
                                     fontSize: normalize(18), 
@@ -118,21 +198,9 @@ const VideoDetail = (props) => {
                                         {videoUser.username}
                                     </Text>
                                 </TouchableOpacity>
-                                {
-                                    video.thumbnailurl ? 
-
-                                    <TouchableOpacity 
-                                        style={{
-                                            marginLeft: normalize(16),  
-                                            backgroundColor: "#00000015", 
-                                            padding: normalize(8),
-                                            borderRadius: 5
-                                        }}
-                                        onPress={() => setShowThumbnail(prev => !prev)}
-                                    >
-                                        <Text style={{fontSize: normalize(12)}}>Toggle thumbnail</Text>
-                                    </TouchableOpacity> : null
-                                }
+                                <Text style={{color: "#0007", fontSize: normalize(16)}}>
+                                    {moment(video.post.createdon).format("MMM DD, YYYY")}
+                                </Text>
                             </View>
                         </View>
                         <View>
@@ -169,26 +237,6 @@ const VideoDetail = (props) => {
                                     display: showThumbnail ? "flex" : "none"
                                 }}
                             />
-                            <View 
-                                style={{
-                                    position: "absolute",
-                                    top: normalize(8),
-                                    right: normalize(8),
-                                    zIndex: 300,
-                                    flexDirection: "row"
-                                }}
-                            >
-                                <Ionicons 
-                                    name={video.private ? "lock-closed-outline" : "lock-open-outline"} 
-                                    size={normalize(20)} 
-                                    color="#000" 
-                                />
-                                <TouchableOpacity 
-                                    onPress={() => setIsFavorited(prev => !prev)} 
-                                >
-                                    <Ionicons name={isFavorited ? "star" : "star-outline"} size={normalize(20)} color="#000" />
-                                </TouchableOpacity>
-                            </View>
                         </View>
                         <View 
                             style={{
@@ -199,7 +247,15 @@ const VideoDetail = (props) => {
                             <View style={{flexDirection: "row", flexGrow: 1}}>
                                 <View style={{flexDirection: "row", alignItems: "center", marginHorizontal: normalize(6)}}>
                                     <Ionicons name="eye-outline" size={normalize(16)}/>
-                                    <Text style={{marginLeft: normalize(4), fontWeight: "bold"}}>700K</Text>
+                                    <Text 
+                                        style={{
+                                            marginLeft: normalize(4), 
+                                            fontWeight: "bold",
+                                            fontSize: normalize(16)
+                                        }}
+                                    >
+                                        700K
+                                    </Text>
                                 </View>
                                 <TouchableOpacity 
                                     style={{
@@ -207,10 +263,18 @@ const VideoDetail = (props) => {
                                         alignItems: "center", 
                                         marginHorizontal: normalize(6)
                                     }}
-                                    onPress={() => setIsLiked(prev => !prev)}
+                                    onPress={() => toggleLike()}
                                 >
-                                    <Ionicons name={isLiked ? "heart" : "heart-outline"} size={normalize(16)}/>
-                                    <Text style={{marginLeft: normalize(4), fontWeight: "bold"}}>50K</Text>
+                                    <Ionicons name={isLiked() ? "heart" : "heart-outline"} size={normalize(16)}/>
+                                    <Text 
+                                        style={{
+                                            marginLeft: normalize(4), 
+                                            fontWeight: "bold",
+                                            fontSize: normalize(16)
+                                        }}
+                                    >
+                                        {likes.length}
+                                    </Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
                                     style={{
@@ -221,26 +285,36 @@ const VideoDetail = (props) => {
                                     onPress={() => viewCommentOrCreate()}
                                 >
                                     <Ionicons name={isCommentedOn ? "chatbox" : "chatbox-outline"} size={normalize(16)}/>
-                                    <Text style={{marginLeft: normalize(4), fontWeight: "bold"}}>8K</Text>
+                                    <Text 
+                                        style={{
+                                            marginLeft: normalize(4), 
+                                            fontWeight: "bold",
+                                            fontSize: normalize(16)
+                                        }}
+                                    >
+                                        8K
+                                    </Text>
                                 </TouchableOpacity>
                             </View>
-                            <Text style={{color: "#0007", fontSize: normalize(16)}}>
-                                {moment(video.post.createdon).format("MMM DD, YYYY")}
-                            </Text>
-                        </View>
-                        <View style={{flexDirection: "row", justifyContent: "center", marginVertical: normalize(8)}}>
-                            <TouchableOpacity 
-                                onPress={() => props.navigation.navigate("EditVideo", {video: video})}
-                            >
-                                <Ionicons 
-                                    name="create-outline" 
-                                    size={normalize(25)} 
-                                    color="#000"
-                                />
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => deleteVideo()}>
-                                <Ionicons name="trash-outline" size={normalize(25)} color="#000"/>
-                            </TouchableOpacity>
+                            <View style={{flexDirection: "row", justifyContent: "center", marginVertical: normalize(8)}}>
+                                <TouchableOpacity 
+                                    onPress={() => props.navigation.navigate("EditVideo", {video: video})}
+                                >
+                                    <Ionicons 
+                                        name="create-outline" 
+                                        size={normalize(25)} 
+                                        color="#000"
+                                    />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => deleteVideo()}>
+                                    <Ionicons name="trash-outline" size={normalize(25)} color="#000"/>
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                    onPress={() => toggleFavorite()} 
+                                >
+                                    <Ionicons name={isFavorited ? "star" : "star-outline"} size={normalize(25)} color="#000" />
+                                </TouchableOpacity>
+                            </View>
                         </View>
                         <View style={{marginBottom: normalize(16)}}>
                             <Text 
@@ -259,12 +333,25 @@ const VideoDetail = (props) => {
             <View style={{flex: showComments ? 6 : 1}}>
                 {
                     showComments ? null :
-                    <TouchableOpacity 
-                        style={{justifyContent: "center", alignItems: "center", height: "100%"}}
-                        onPress={() => setShowComments(prev => !prev)}
-                    >
-                        <Text style={{fontWeight: "bold", fontSize: normalize(16)}}>Show comments</Text>
-                    </TouchableOpacity>
+                    
+                    <View style={{flexDirection: "row", justifyContent: "center", height: "100%"}}>
+                        <TouchableOpacity 
+                            style={{justifyContent: "center", alignItems: "center", height: "100%", flex: 1}}
+                            onPress={() => setShowComments(prev => !prev)}
+                        >
+                            <Text style={{fontWeight: "bold", fontSize: normalize(16)}}>Show comments</Text>
+                        </TouchableOpacity>
+                        {
+                            video.thumbnailurl ?
+
+                            <TouchableOpacity 
+                                style={{justifyContent: "center", alignItems: "center", height: "100%", flex: 1}}
+                                onPress={() => setShowThumbnail(prev => !prev)}
+                            >
+                                <Text style={{fontWeight: "bold", fontSize: normalize(16)}}>Show thumbnail</Text>
+                            </TouchableOpacity> : null
+                        }
+                    </View>
                 }
 
                 {

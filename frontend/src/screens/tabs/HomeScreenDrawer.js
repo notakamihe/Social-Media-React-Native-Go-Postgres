@@ -7,10 +7,11 @@ import SettingsScreen from './SettingsScreen';
 import { normalize } from '../../utils/utils';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { UserContext } from '../../context/UserContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Drawer = createDrawerNavigator()
 
-export default function HomeScreenDrawer() {
+export default function HomeScreenDrawer(props) {
     const {user, setUser} = useContext(UserContext)
 
     const DrawerView = (props) => (
@@ -43,28 +44,37 @@ export default function HomeScreenDrawer() {
                         style={{alignSelf: "center", marginVertical: 12}}  
                     />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => props.navigation.dangerouslyGetParent().navigate("Login")}>
-                    {
-                        user ? 
-                        
+
+                {
+                    user ? 
+
+                    <TouchableOpacity onPress={() => logOut(props)}>
                         <Ionicons 
                             name="log-out-outline" 
                             color="black" 
                             size={normalize(22)} 
                             style={{alignSelf: "center", marginVertical: 12}}  
-                        /> :
+                        />
+                    </TouchableOpacity> :
+                    <TouchableOpacity onPress={() => props.navigation.dangerouslyGetParent().navigate("Login")}>
                         <Ionicons 
                             name="log-in-outline" 
                             color="black" 
                             size={normalize(22)} 
                             style={{alignSelf: "center", marginVertical: 12}}  
                         />
-
-                    }
-                </TouchableOpacity>
+                    </TouchableOpacity> 
+                }
             </View>
         </View>
     )
+
+    const logOut = (props) => {
+        AsyncStorage.removeItem("token").then(() => {
+            props.navigation.dangerouslyGetParent().navigate("Login")
+            setUser(null)
+        })
+    }
 
     return (
         <Drawer.Navigator

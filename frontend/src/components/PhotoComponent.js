@@ -1,35 +1,59 @@
-import React, {useState} from 'react'
+import React, {useEffect, useState} from 'react'
 import { View, Text, Dimensions, Image, TouchableOpacity } from 'react-native'
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { navigate, normalize } from '../utils/utils';
+import { normalize, timeAgoShort } from '../utils/utils';
 import AutoHeightImage from "react-native-auto-height-image";
 import { Avatar } from 'react-native-elements';
 import { decode } from 'html-entities';
 import Popover from 'react-native-popover-view/dist/Popover';
+import axios from 'axios';
 
 const PhotoComponent = (props) => {
     const widthPercentage = props.widthPercentage || 0.9
     const [visible, setVisible] = useState(false)
 
+    const [photoUser, setPhotoUser] = useState({})
+
+    useEffect(() => {
+        if (props.photo)
+            axios.get(axios.defaults.baseURL + `users/${props.photo.post.userid}`).then(res => {
+                setPhotoUser(res.data);
+            }).catch(err => {
+                console.log(err);
+            })
+    }, [])
+
+    const deletePhoto = () => {
+        axios.delete(axios.defaults.baseURL + `posts/${props.photo.post_id}`).then(res => {
+            console.log(res.data);
+            props.getPosts()
+            setVisible(false)
+        }).catch(err => {
+            console.log(err);
+        })
+    }
+
     return (
         <TouchableOpacity
             style={{marginVertical: normalize(16), alignItems: "center"}} 
-            onPress={() => navigate(props.navigation, "PhotoDetail")}
+            onPress={() => props.navigation.navigate("PhotoDetail", {photo: props.photo})}
         >
-            <AutoHeightImage 
-                source={require("./../../assets/images/defaultpfp.png")}
-                width={Dimensions.get("window").width * widthPercentage}
+            <Image 
+                source={{uri: props.photo ? axios.defaults.baseURL + props.photo.fileurl : ""}}
+                resizeMode="cover"
                 style={{
-                    borderRadius: 15,
+                    borderRadius: 5,
                     borderWidth: 2,
-                    borderColor: "#000"
+                    borderColor: "#000",
+                    width: Dimensions.get("window").width * widthPercentage,
+                    height: (Dimensions.get("window").width * widthPercentage) * 9 / 16
                 }}
             />
             <Text 
                 style={{fontWeight: "bold", marginTop: normalize(8), fontSize: normalize(16)}} 
                 numberOfLines={1}
             >
-                This is the title of my amazing video
+                {props.photo ? props.photo.title : ""}
             </Text>
             {
                 props.hideUser ? null :
@@ -43,7 +67,8 @@ const PhotoComponent = (props) => {
                 >
                     <Avatar size={normalize(20)} rounded source={require("./../../assets/images/defaultpfp.png")} />
                     <Text style={{marginLeft: 16, fontSize: normalize(16)}}>
-                        johndoeisgreat {decode("&#183")} 2d
+                        {photoUser.username} {decode("&#183") + " "} 
+                        {props.photo ? timeAgoShort(props.photo.post.createdon) : ""}
                     </Text>
                 </View>
             }
@@ -119,17 +144,16 @@ const PhotoComponent = (props) => {
                         
                         <TouchableOpacity 
                             style={{marginVertical: normalize(8)}} 
-                            onPress={() => { 
-                                if (props.navigation) {
-                                    navigate(props.navigation, "EditPhoto") 
-                                    setVisible(false)
-                                }
+                            onPress={() => {
+                                setVisible(false)
+                                props.navigation.navigate("EditPhoto", {photo: props.photo})
                             }}
                         >
                             <Text>Edit</Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
                             style={{marginVertical: normalize(8)}}
+                            onPress={() => deletePhoto()}
                         >
                             <Text>Delete</Text>
                         </TouchableOpacity>
