@@ -46,6 +46,7 @@ const PollDetail = (props) => {
         })
 
         getPollOptions()
+        getFavorite()
     }, [props.route.params.poll])
 
     const deletePoll = () => {
@@ -55,6 +56,35 @@ const PollDetail = (props) => {
         }).catch(err => {
             console.log(err);
         })
+    }
+
+    const getFavorite = () => {
+        axios.get(axios.defaults.baseURL + `favorites/${poll.post_id}/${user.id}`).then(res => {
+            console.log(res.data);
+            setIsFavorited(true)
+        }).catch(err => {
+            setIsFavorited(false)
+        })
+    }
+
+    const toggleFavorite = () => {
+        if (isFavorited)
+            axios.delete(axios.defaults.baseURL + `favorites/${poll.post_id}/${user.id}`).then(res => {
+                console.log(res.data);
+                getFavorite()
+            }).catch(err => {
+                console.log(err.response.data);
+            })
+        else
+            axios.post(axios.defaults.baseURL + "favorites", {
+                postid: poll.post_id,
+                userid: user.id
+            }).then(res => {
+                console.log(res.data);
+                getFavorite()
+            }).catch(err => {
+                console.log(err);
+            })
     }
 
     const getPollOptions = async () => {
@@ -230,7 +260,7 @@ const PollDetail = (props) => {
                                     <Ionicons name="trash-outline" size={normalize(25)} color="#000"/>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
-                                    onPress={() => setIsFavorited(prev => !prev)} 
+                                    onPress={() => toggleFavorite()} 
                                 >
                                     <Ionicons name={isFavorited ? "star" : "star-outline"} size={normalize(25)} color="#000" />
                                 </TouchableOpacity>

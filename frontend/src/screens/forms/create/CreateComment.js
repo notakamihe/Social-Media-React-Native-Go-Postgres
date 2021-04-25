@@ -1,26 +1,42 @@
-import React, { useEffect, useRef, useState } from 'react'
+import axios from 'axios'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { View, Text } from 'react-native'
 import { Avatar } from 'react-native-elements'
 import { ScrollView, TextInput, TouchableOpacity } from 'react-native-gesture-handler'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import FormError from '../../../components/FormError'
+import { UserContext } from '../../../context/UserContext'
 import { normalize } from '../../../utils/utils'
 
 const CreateComment = (props) => {
+    const {user, setUser} = useContext(UserContext)
+
+    const [post, setPost] = useState(props.route.params.post)
+    const [postUser, setPostUser] = useState(props.route.params.user)
     const [content, setContent] = useState("")
     const [error, setError] = useState("")
 
     const errorRef = useRef()
 
-    useEffect(() => {
-        if (error)
-            errorRef.current.scrollToEnd({animated: true})
-    }, [error])
-
     const createComment = () => {
-        console.log(content);
-        setError("This is an error")
-        //props.navigation.goBack()
+        setError("")
+
+        if (!content) {
+            setError("Comment must not be blank.")
+            errorRef.current.scrollToEnd({animated: true})
+            return
+        }
+
+        axios.post(axios.defaults.baseURL + "comments", {
+            postid: post.post_id,
+            userid: user.id,
+            content: content
+        }).then(res => {
+            console.log(res.data);
+            props.navigation.goBack()
+        }).catch(err => {
+            console.log(err);
+        })
     }
 
     return (
@@ -33,7 +49,9 @@ const CreateComment = (props) => {
                             rounded
                             size={normalize(32)}
                         />
-                        <Text style={{marginLeft: normalize(16), fontSize: normalize(16)}}>johndoeisgreat</Text>
+                        <Text style={{marginLeft: normalize(16), fontSize: normalize(16)}}>
+                            {postUser.username}
+                        </Text>
                     </View>
                     <Text 
                         style={{
@@ -43,8 +61,9 @@ const CreateComment = (props) => {
                             textAlign: "center",
                             marginHorizontal: normalize(16)
                         }}
+                        numberOfLines={3}
                     >
-                        This will be the placeholder of this video.
+                        {post.post.category == "statement" ? post.content : post.title}
                     </Text>
                     <TextInput 
                         multiline

@@ -13,14 +13,25 @@ const PhotoComponent = (props) => {
     const [visible, setVisible] = useState(false)
 
     const [photoUser, setPhotoUser] = useState({})
+    const [likes, setLikes] = useState([])
+    const [comments, setComments] = useState([])
 
     useEffect(() => {
-        if (props.photo)
+        if (props.photo) {
             axios.get(axios.defaults.baseURL + `users/${props.photo.post.userid}`).then(res => {
                 setPhotoUser(res.data);
             }).catch(err => {
                 console.log(err);
             })
+            
+            axios.get(axios.defaults.baseURL + `likes`).then(res => {
+                setLikes(res.data.filter(l => l.postid == props.photo.post_id));
+            })
+
+            axios.get(axios.defaults.baseURL + `comments`).then(res => {
+                setComments(res.data.filter(l => l.postid == props.photo.post_id));
+            })
+        }
     }, [])
 
     const deletePhoto = () => {
@@ -102,7 +113,7 @@ const PhotoComponent = (props) => {
                             fontSize: normalize(16)
                         }}
                     >
-                        50K
+                        {likes.length}
                     </Text>
                 </View>
                 <View style={{flexDirection: "row", alignItems: "center", marginHorizontal: 6}}>
@@ -115,7 +126,7 @@ const PhotoComponent = (props) => {
                             fontSize: normalize(16)
                         }}
                     >
-                        8K
+                        {comments.length}
                     </Text>
                 </View>
                 {

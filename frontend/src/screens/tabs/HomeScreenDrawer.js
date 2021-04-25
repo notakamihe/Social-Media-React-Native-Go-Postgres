@@ -69,11 +69,10 @@ export default function HomeScreenDrawer(props) {
         </View>
     )
 
-    const logOut = (props) => {
-        AsyncStorage.removeItem("token").then(() => {
-            props.navigation.dangerouslyGetParent().navigate("Login")
-            setUser(null)
-        })
+    const logOut = async (props) => {
+        await AsyncStorage.removeItem("token")
+        props.navigation.dangerouslyGetParent().navigate("Login")
+        setUser(null)
     }
 
     return (

@@ -1,12 +1,58 @@
-import React, { useContext } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { UserContext } from '../../context/UserContext';
 import { View, Text, Dimensions } from 'react-native'
 import { normalize } from 'react-native-elements'
 import { ScrollView } from 'react-native-gesture-handler'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import moment from 'moment';
+import axios from 'axios';
+import { set } from 'react-native-reanimated';
+import numeral from 'numeral';
 
 export default function StatsScreen() {
     const {user, setUser} = useContext(UserContext)
+
+    const [likes, setLikes] = useState([])
+    const [comments, setComments] = useState([])
+    const [posts, setPosts] = useState([])
+    const [followers, setFollowers] = useState([])
+    const [following, setFollowing] = useState([])
+
+    useEffect(() => {
+        getData()
+    }, [user])
+
+    const average = (n) => {
+        return n / posts.filter(p => p.post.category != "poll").length
+    }
+
+    const getData = () => {
+        axios.get(axios.defaults.baseURL + "follows").then(res => {
+            setFollowers(res.data.filter(f => f.followed == user.id));
+            setFollowing(res.data.filter(f => f.follower == user.id));
+        }).catch(err => {
+            console.log(err);
+        })
+
+        axios.get(axios.defaults.baseURL + "posts").then(res => {
+            const postsData = res.data.filter(p => p.post.userid == user.id)
+            setPosts(postsData)
+            setLikes([])
+            setComments([])
+
+            postsData.forEach(p => {
+                axios.get(axios.defaults.baseURL + "likes").then(res => {
+                    setLikes(prev => [...prev, ...res.data.filter(l => l.postid == p.post_id)]);
+                })
+
+                axios.get(axios.defaults.baseURL + "comments").then(res => {
+                    setComments(prev => [...prev, ...res.data.filter(c => c.postid == p.post_id)]);
+                })
+            })
+        }).catch(err => {
+            console.log(err);
+        })
+    }
 
     return (
         user ?
@@ -42,7 +88,7 @@ export default function StatsScreen() {
                             }}
                         >
                             <Text>Followers</Text>
-                            <Text style={{fontSize: 20}}>162,893</Text>
+                            <Text style={{fontSize: 20}}>{followers.length}</Text>
                         </View>
                         <View 
                             style={{
@@ -55,7 +101,7 @@ export default function StatsScreen() {
                             }}
                         >
                             <Text>Following</Text>
-                            <Text style={{fontSize: 20}}>420</Text>
+                            <Text style={{fontSize: 20}}>{following.length}</Text>
                         </View>
                     </View>
                     <View style={{flexDirection: "row", marginVertical: 8, alignItems: "flex-end"}}>
@@ -70,7 +116,7 @@ export default function StatsScreen() {
                             }}
                         >
                             <Text>Total comments</Text>
-                            <Text style={{fontSize: 20}}>35,000</Text>
+                            <Text style={{fontSize: 20}}>{comments.length}</Text>
                         </View>
                         <View 
                             style={{
@@ -83,7 +129,7 @@ export default function StatsScreen() {
                             }}
                         >
                             <Text>Total Likes</Text>
-                            <Text style={{fontSize: 20}}>800,000</Text>
+                            <Text style={{fontSize: 20}}>{likes.length}</Text>
                         </View>
                     </View>
                     <View 
@@ -91,65 +137,30 @@ export default function StatsScreen() {
                     marginVertical: 8}}
                     >
                         <Text>Average Comments</Text>
-                        <Text style={{fontSize: 24}}>1,300</Text>
+                        <Text style={{fontSize: 24}}>
+                            {numeral(average(comments.length)).format("0.[00]")}
+                        </Text>
                     </View>
                     <View 
                         style={{backgroundColor: "#00000015", padding: 8, borderRadius: 5, alignItems: "center",
                     marginVertical: 8}}
                     >
                         <Text>Average Likes</Text>
-                        <Text style={{fontSize: 24}}>10,000</Text>
+                        <Text style={{fontSize: 24}}>
+                            {numeral(average(likes.length)).format("0.[00]")}
+                        </Text>
                     </View>
                     <View 
                         style={{backgroundColor: "#00000015", padding: 8, borderRadius: 5, alignItems: "center",
                     marginVertical: 8}}
                     >
                         <Text>Average Views</Text>
-                        <Text style={{fontSize: 24}}>2,000,000</Text>
-                    </View>
-                    <View style={{flexDirection: "row", marginVertical: 8, alignItems: "flex-start"}}>
-                        <View 
-                            style={{
-                                backgroundColor: "#00000015", 
-                                padding: 8, 
-                                borderRadius: 5, 
-                                alignItems: "center",
-                                flex: 0.3,
-                                marginHorizontal: 8
-                            }}
-                        >
-                            <Text style={{fontSize: normalize(12), textAlign: "center"}}>Comments{"\n"}Rank</Text>
-                            <Text style={{fontSize: 24}}>4</Text>
-                        </View>
-                        <View 
-                            style={{
-                                backgroundColor: "#00000015", 
-                                padding: 8, 
-                                borderRadius: 5, 
-                                alignItems: "center",
-                                flex: 0.3,
-                                marginHorizontal: 8
-                            }}
-                        >
-                            <Text style={{fontSize: normalize(12), textAlign: "center"}}>Likes{"\n"}Rank</Text>
-                            <Text style={{fontSize: 24}}>1</Text>
-                        </View>
-                        <View 
-                            style={{
-                                backgroundColor: "#00000015", 
-                                padding: 8, 
-                                borderRadius: 5, 
-                                alignItems: "center",
-                                flex: 0.3,
-                                marginHorizontal: 8
-                            }}
-                        >
-                            <Text style={{fontSize: normalize(12), textAlign: "center"}}>Views{"\n"}Rank</Text>
-                            <Text style={{fontSize: 24}}>1</Text>
-                        </View>
+                        <Text style={{fontSize: 24}}>
+                            2,000,000
+                        </Text>
                     </View>
                     <Text style={{marginTop: normalize(32), fontSize: normalize(16)}}>
-                        Joined on March 29, 2017
+                        Joined on {moment(user.joinedon).format("MMM DD, YYYY")}
                     </Text>
                 </View>
             </ScrollView>

@@ -18,12 +18,14 @@ const PostsScreen = (props) => {
     const {user, setUser} = useContext(UserContext)
 
     useEffect(() => {
+        getPosts()
+
         const onFocus = props.navigation.addListener("focus", () => {
             getPosts()
         });
     
         return onFocus;
-    }, [props.navigation]);
+    }, [user, props.navigation]);
 
     const filterByPostType = (v, data) => {
         setSelectedPostType(v)

@@ -9,6 +9,7 @@ import { decode } from 'html-entities';
 import moment from "moment"
 import axios from 'axios';
 import { UserContext } from '../../context/UserContext';
+import { CommentComponent } from '../../components';
 
 const PhotoDetail = (props) => {
     const {user, setUser} = useContext(UserContext)
@@ -17,9 +18,9 @@ const PhotoDetail = (props) => {
     const [photoUser, setPhotoUser] = useState({})
 
     const [showComments, setShowComments] = useState(false)
-    const [isCommentedOn, setIsCommentedOn] = useState(false)
 
     const [likes, setLikes] = useState([])
+    const [comments, setComments] = useState([])
     const [isFavorited, setIsFavorited] = useState(true)
 
     const commentRef = useRef()
@@ -45,16 +46,19 @@ const PhotoDetail = (props) => {
     })
 
     useEffect(() => {
-        axios.get(axios.defaults.baseURL + `users/${photo.post.userid}`).then(res => {
-            setPhoto(props.route.params.photo)
-            setPhotoUser(res.data)
-        }).catch(err => {
-            console.log(err);
-        })
+        props.navigation.addListener("focus", () => {
+            axios.get(axios.defaults.baseURL + `users/${photo.post.userid}`).then(res => {
+                setPhoto(props.route.params.photo)
+                setPhotoUser(res.data)
+            }).catch(err => {
+                console.log(err);
+            })
 
-        getLikes()
-        getFavorite()
-    }, [props.route.params.photo])
+            getLikes()
+            getFavorite()
+            getComments()
+        })
+    }, [props.navigation])
 
     const deletePhoto = () => {
         axios.delete(axios.defaults.baseURL + `posts/${photo.post_id}`).then(res => {
@@ -65,6 +69,19 @@ const PhotoDetail = (props) => {
         })
     }
 
+    const getComments = () => {
+        setShowComments(false)
+
+        axios.get(axios.defaults.baseURL + "comments").then(res => {
+            let commentsData = res.data.filter(c => c.postid == photo.post_id && c.userid != user.id)
+            const userComment = res.data.find(c => c.postid == photo.post_id && c.userid == user.id)
+
+            if (userComment)
+                commentsData.unshift(userComment)
+                
+            setComments(commentsData)
+        })
+    }
     const getFavorite = () => {
         axios.get(axios.defaults.baseURL + `favorites/${photo.post_id}/${user.id}`).then(res => {
             console.log(res.data);
@@ -81,6 +98,11 @@ const PhotoDetail = (props) => {
             console.log(err);
         })
     }
+
+    const isCommentedOn = () => {
+        return comments.map(c => c.userid).includes(user.id)
+    }
+
     const isLiked = () => {
         return likes.map(l => l.userid).includes(user.id);
     }
@@ -127,11 +149,11 @@ const PhotoDetail = (props) => {
 
 
     const viewCommentOrCreate = () => {
-        if (isCommentedOn) {
+        if (isCommentedOn()) {
             setShowComments(true)
             commentRef.current.scrollTo({x: 0, y: 0, animated: true})
         } else {
-            props.navigation.navigate("CreateComment")
+            props.navigation.navigate("CreateComment", {post: photo, user: photoUser})
         }
     }
 
@@ -256,7 +278,7 @@ const PhotoDetail = (props) => {
                                     }}
                                     onPress={() => viewCommentOrCreate()}
                                 >
-                                    <Ionicons name={isCommentedOn ? "chatbox" : "chatbox-outline"} size={normalize(16)}/>
+                                    <Ionicons name={isCommentedOn() ? "chatbox" : "chatbox-outline"} size={normalize(16)}/>
                                     <Text 
                                         style={{
                                             marginLeft: normalize(4), 
@@ -264,7 +286,7 @@ const PhotoDetail = (props) => {
                                             fontSize: normalize(16)
                                         }}
                                     >
-                                        8K
+                                        {comments.length}
                                     </Text>
                                 </TouchableOpacity>
                                 <View 
@@ -305,113 +327,57 @@ const PhotoDetail = (props) => {
                     </View>
                 </ScrollView>
             </View>
-            <View style={{flex: showComments ? 6 : 1}}>
-                {
-                    showComments ? null :
-                    <TouchableOpacity 
-                        style={{justifyContent: "center", alignItems: "center", height: "100%"}}
-                        onPress={() => setShowComments(prev => !prev)}
-                    >
-                        <Text style={{fontWeight: "bold", fontSize: normalize(16)}}>Show comments</Text>
-                    </TouchableOpacity>
-                }
+            {
+                comments.length ?
 
-                {
-                    showComments ? 
-                    <TouchableOpacity 
-                        onPress={() => setShowComments(prev => !prev)} 
-                        style={{
-                            position: "absolute",
-                            top: normalize(0),
-                            right: normalize(0),
-                            zIndex: 300
-                        }}
-                    >
-                        <Ionicons name="close-circle" size={30} color="#0003" />
-                    </TouchableOpacity> : null
-                }
+                <View style={{flex: showComments ? 6 : 1}}>
+                    {
+                        showComments ? null :
+                        
+                        <TouchableOpacity 
+                            style={{justifyContent: "center", alignItems: "center", height: "100%"}}
+                            onPress={() => setShowComments(prev => !prev)}
+                        >
+                            <Text style={{fontWeight: "bold", fontSize: normalize(16)}}>
+                                Show {comments.length || ""} comments
+                            </Text>
+                        </TouchableOpacity>
+                    }
 
-                <ScrollView ref={commentRef}>
-                    <View style={{alignItems: "center", paddingVertical: normalize(16)}}>
-                        <View 
+                    {
+                        showComments ? 
+                        <TouchableOpacity 
+                            onPress={() => setShowComments(prev => !prev)} 
                             style={{
-                                flexDirection: "row",
-                                borderColor: "#000",
-                                borderWidth: 1,
-                                width: "90%",
-                                borderRadius: 5,
-                                padding: 8,
-                                marginVertical: normalize(8)
+                                position: "absolute",
+                                top: normalize(0),
+                                right: normalize(0),
+                                zIndex: 300
                             }}
                         >
-                            <View style={{alignItems: "center"}}>
-                                <Avatar
-                                    source={require("./../../../assets/images/defaultpfp.png")}
-                                    rounded
-                                />
-                                <View style={{flexDirection: "row", marginTop: "auto"}}>
-                                    <TouchableOpacity onPress={() => props.navigation.navigate("EditComment")}>
-                                        <Ionicons name="create-outline" size={normalize(20)} />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity>
-                                        <Ionicons name="trash-outline" size={normalize(20)} />
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                            <View style={{marginLeft: 16, flexShrink: 1}}>
-                                <Text style={{fontSize: normalize(12), fontWeight: "bold"}}>
-                                    johndoeisgreat {decode("&#183")} 4/18/17
-                                </Text>
-                                <Text 
-                                    style={{
-                                        backgroundColor: "#00000015", 
-                                        padding: normalize(8),
-                                        borderRadius: normalize(5),
-                                        marginTop: normalize(8),
-                                        flexShrink: 1,
-                                        fontSize: normalize(14)
-                                    }}
-                                >
-                                    Lorem ipsum, ipsum lorem
-                                </Text>
-                            </View>
+                            <Ionicons name="close-circle" size={30} color="#0003" />
+                        </TouchableOpacity> : null
+                    }
+
+                    <ScrollView ref={commentRef}>
+                        <View style={{alignItems: "center", paddingVertical: normalize(16)}}>
+                            {
+                                comments.map((c, idx) => (
+                                    <CommentComponent 
+                                        key={idx} 
+                                        comment={c} 
+                                        readOnly={c && c.userid == user.id} 
+                                        navigation={props.navigation}
+                                        getComments={getComments}
+                                        post={photo}
+                                        user={photoUser}
+                                    />
+                                ))
+                            }
                         </View>
-                        <View 
-                            style={{
-                                flexDirection: "row",
-                                borderColor: "#000",
-                                borderWidth: 1,
-                                width: "90%",
-                                borderRadius: 5,
-                                padding: normalize(8),
-                                marginVertical: normalize(8)
-                            }}
-                        >
-                            <Avatar
-                                source={require("./../../../assets/images/defaultpfp.png")}
-                                rounded
-                            />
-                            <View style={{marginLeft: 16, flexShrink: 1}}>
-                                <Text style={{fontSize: normalize(12), fontWeight: "bold"}}>
-                                    johndoeisgreat {decode("&#183")} 4/18/17
-                                </Text>
-                                <Text 
-                                    style={{
-                                        backgroundColor: "#00000015", 
-                                        padding: normalize(8),
-                                        borderRadius: normalize(5),
-                                        marginTop: normalize(8),
-                                        flexShrink: 1,
-                                        fontSize: normalize(14)
-                                    }}
-                                >
-                                    Lorem ipsum, ipsum lorem
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
-                </ScrollView>
-            </View>
+                    </ScrollView>
+                </View> : null
+            }
         </SafeAreaView>
         
     )

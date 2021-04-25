@@ -11,6 +11,7 @@ import StatementComponent from '../../components/StatementComponent';
 import PollComponent from '../../components/PollComponent';
 import axios from 'axios';
 import { UserContext } from '../../context/UserContext';
+import UserComponent from '../../components/UserComponent';
 
 const ExploreScreen = (props) => {
     const {user, setUser} = useContext(UserContext)
@@ -22,16 +23,18 @@ const ExploreScreen = (props) => {
     const [exploreFilterName, setExploreFilterName] = useState("explore")
 
     useEffect(() => {
-        axios.get(axios.defaults.baseURL + "users").then(res => {
-            setUsers(res.data);
-        }).catch(err => {
-            console.log(err);
-        })
+        props.navigation.addListener("focus", () => {
+            axios.get(axios.defaults.baseURL + "users").then(res => {
+                setUsers(res.data);
+            }).catch(err => {
+                console.log(err);
+            })
 
-        axios.get(axios.defaults.baseURL + "posts").then(res => {
-            setPosts(res.data)
-        }).catch(err => {
-            console.log(err);
+            axios.get(axios.defaults.baseURL + "posts").then(res => {
+                setPosts(res.data)
+            }).catch(err => {
+                console.log(err);
+            })
         })
     }, [])
 
@@ -87,6 +90,9 @@ const ExploreScreen = (props) => {
                             <View>
                             {
                                 data.map((p, idx) => {
+                                    if (p.post.userid == user.id)
+                                        return null
+
                                     switch (p.post.category) {
                                         case "statement":
                                             return (
@@ -131,57 +137,12 @@ const ExploreScreen = (props) => {
                             </View> : 
                             <View>
                                 {
-
                                     users.filter(u => !user || u.id != user.id).map((u, idx) => (
-                                        <TouchableOpacity 
-                                            key={idx}
-                                            style={{
-                                                flexDirection: "row", 
-                                                alignItems: "center", 
-                                                borderColor: "#000", 
-                                                borderWidth: 1,
-                                                padding: 4,
-                                                borderRadius: 10,
-                                                minWidth: "100%",
-                                                maxWidth: "100%",
-                                                marginVertical: normalize(16),
-                                            }}
-                                            onPress={() => 
-                                                props.navigation.dangerouslyGetParent().navigate("UserDetail", {
-                                                    user: u
-                                                })
-                                            }
-                                        >
-                                            <Avatar 
-                                                source={require("./../../../assets/images/defaultpfp.png")}
-                                                size={normalize(80)}
-                                                avatarStyle={{
-                                                    borderRadius: 10
-                                                }}
-                                            />
-                                            <View style={{marginLeft: 16}}>
-                                                <Text 
-                                                    style={{fontSize: 18, fontWeight: "bold"}} 
-                                                    numberOfLines={1}
-                                                >
-                                                    {u.username}
-                                                </Text>
-                                                <View style={{flexDirection: "row"}}>
-                                                    <View style={{flexDirection: "row", alignItems: "center", marginHorizontal: normalize(6)}}>
-                                                        <Ionicons name="people-outline" size={normalize(20)}/>
-                                                        <Text style={{marginHorizontal: 4, fontSize: normalize(16)}}>146</Text>
-                                                    </View>
-                                                    <View style={{flexDirection: "row", alignItems: "center", marginHorizontal: normalize(6)}}>
-                                                        <Ionicons name="arrow-forward-outline" size={normalize(20)}/>
-                                                        <Text style={{marginHorizontal: 4, fontSize: normalize(16)}}>132</Text>
-                                                    </View>
-                                                    <View style={{flexDirection: "row", alignItems: "center", marginHorizontal: normalize(6)}}>
-                                                        <Ionicons name="newspaper-outline" size={normalize(20)}/>
-                                                        <Text style={{marginHorizontal: 4, fontSize: normalize(16)}}>240</Text>
-                                                    </View>
-                                                </View>
-                                            </View>
-                                        </TouchableOpacity>
+                                        <UserComponent 
+                                            key={idx} 
+                                            user={u} 
+                                            navigation={props.navigation.dangerouslyGetParent()}
+                                        />
                                     ))
                                 }
                             </View>

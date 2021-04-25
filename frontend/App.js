@@ -1,7 +1,7 @@
 import React from 'react'
 import { createStackNavigator } from '@react-navigation/stack'
 import { NavigationContainer } from '@react-navigation/native'
-import { Tabs, StartScreen, DescriptionScreen } from './src/screens/index'
+import { Tabs, StartScreen, DescriptionScreen, FollowListScreen } from './src/screens/index'
 import { ChangePassword, CreateComment, CreatePhoto, CreatePoll, CreateStatement, CreateVideo } from './src/screens/forms/create'
 import {EditVideo, EditPhoto, EditPoll, EditStatement, EditComment, EditProfile} from './src/screens/forms/edit'
 import { PhotoDetail, PollDetail, StatementDetail, UserDetail, VideoDetail } from './src/screens/detail'
@@ -43,11 +43,11 @@ export default function App() {
                     <Stack.Screen name="PhotoDetail" component={PhotoDetail} options={{title: ""}} />
                     <Stack.Screen name="StatementDetail" component={StatementDetail} options={{title: ""}} />
                     <Stack.Screen name="PollDetail" component={PollDetail} options={{title: ""}} />
+
                     <Stack.Screen 
                         name="UserDetail" 
                         component={UserDetail} 
                         options={{
-                            title:"Profile of johndoeisgreat",
                             headerTitleStyle: {
                                 fontSize: normalize(16)
                             }
@@ -58,11 +58,16 @@ export default function App() {
                         name="Description" 
                         component={DescriptionScreen} 
                         options={{
-                            title: "Description of johndoeisgreat",
                             headerTitleStyle: {
                                 fontSize: normalize(16)
                             }
                         }} 
+                    />
+
+                    <Stack.Screen 
+                        name="Follows"
+                        component={FollowListScreen} 
+                        options={{headerTitleStyle: normalize(16)}}
                     />
                 </Stack.Navigator>
             </NavigationContainer>

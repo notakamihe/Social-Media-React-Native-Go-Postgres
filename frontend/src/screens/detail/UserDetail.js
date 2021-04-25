@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { View, Text, Dimensions, Image } from 'react-native'
 import { Avatar } from "react-native-elements";
 import { ScrollView, TouchableOpacity } from 'react-native-gesture-handler';
@@ -8,14 +8,82 @@ import { normalize } from '../../utils/utils';
 import { flag } from "country-emoji";
 import { VideoComponent, PhotoComponent, PollComponent, StatementComponent } from '../../components';
 import moment from "moment";
+import axios from 'axios';
+import { UserContext } from '../../context/UserContext';
 
 const UserDetail = (props) => {
-    const [isFollowed, setIsFollowed] = useState(false)
+    const {user, setUser} = useContext(UserContext)
+
     const [viewedUser, setViewedUser] = useState({})
+
+    const [posts, setPosts] = useState([])
+    const [followers, setFollowers] = useState([])
+    const [following, setFollowing] = useState([])
+
+    const [totalLikes, setTotalLikes] = useState(0)
 
     useEffect(() => {
         setViewedUser(props.route.params.user)
+        getFollowers(props.route.params.user)
+        getFollowing(props.route.params.user)
+
+        axios.get(axios.defaults.baseURL + "posts").then(res => {
+            const filtered = res.data.filter(p =>  p.post.userid == props.route.params.user.id)
+            setPosts(filtered);
+
+            filtered.forEach(p => {
+                axios.get(axios.defaults.baseURL + "likes").then(r => {
+                    setTotalLikes(prev => prev + r.data.filter(l => l.postid == p.post_id).length);
+                })
+            })
+        })
+
+        props.navigation.setOptions({
+            title: `Profile of ${props.route.params.user.username}`
+        })
     }, [])
+
+
+    const getFollowers = (user) => {
+        axios.get(axios.defaults.baseURL + "follows").then(res => {
+            setFollowers(res.data ? res.data.filter(f => f.followed == user.id) : []);
+        }).catch(err => {
+            console.log(err);
+        })
+    }
+
+    const getFollowing = (user) => {
+        axios.get(axios.defaults.baseURL + "follows").then(res => {
+            setFollowing(res.data ? res.data.filter(f => f.follower == user.id) : []);
+        }).catch(err => {
+            console.log(err);
+        })
+    }
+
+    const isFollowed = () => {
+        return followers.map(f => f.follower).includes(user.id)
+    }
+
+    const toggleFollow = () => {
+        if (isFollowed()) {
+            axios.delete(axios.defaults.baseURL + `follows/${viewedUser.id}/${user.id}`).then(res => {
+                console.log(res.data);
+                getFollowers(viewedUser)
+            }).catch(err => {
+                console.log(err);
+            })
+        } else {
+            axios.post(axios.defaults.baseURL + "follows", {
+                followed: viewedUser.id,
+                follower: user.id
+            }).then(res => {
+                console.log(res.data);
+                getFollowers(viewedUser)
+            }).catch(err => {
+                console.log(err);
+            })
+        }
+    }
 
     return (
         <SafeAreaView style={{flex: 1}}>
@@ -32,10 +100,10 @@ const UserDetail = (props) => {
                             <View style={{flexDirection: "row"}}>
                                 <TouchableOpacity 
                                     style={{flexDirection: "row", alignItems: "center", marginRight: 8}}
-                                    onPress={() => setIsFollowed(prev => !prev)}
+                                    onPress={() => toggleFollow()}
                                 >
                                     <Ionicons 
-                                        name={isFollowed ? "people" : "people-outline"} 
+                                        name={isFollowed() ? "people" : "people-outline"} 
                                         size={normalize(18)} 
                                     />
                                     <Text 
@@ -45,7 +113,7 @@ const UserDetail = (props) => {
                                             fontSize: normalize(16)
                                         }}
                                     >
-                                        146K
+                                        {followers.length}
                                     </Text>
                                 </TouchableOpacity>
                                 <View style={{flexDirection: "row", alignItems: "center", marginRight: 8}}>
@@ -57,7 +125,7 @@ const UserDetail = (props) => {
                                             fontSize: normalize(16)
                                         }}
                                     >
-                                        132K
+                                        {following.length}
                                     </Text>
                                 </View>
                             </View>
@@ -110,7 +178,7 @@ const UserDetail = (props) => {
                                             fontSize: normalize(16)
                                         }}
                                     >
-                                        5M
+                                        {totalLikes}
                                     </Text>
                                 </View>
                                 <View 
@@ -160,13 +228,50 @@ const UserDetail = (props) => {
                             fontSize: normalize(20)
                         }}
                     >
-                        Posts (4)
+                        Posts ({posts.length})
                     </Text>
                     <View style={{alignItems: "center"}}>
-                        <VideoComponent navigation={props.navigation} />
-                        <PhotoComponent navigation={props.navigation}/>
-                        <StatementComponent navigation={props.navigation}/>
-                        <PollComponent navigation={props.navigation}/>
+                        {
+                            posts.map((p, idx) => {
+                                switch (p.post.category) {
+                                    case "statement":
+                                        return (
+                                            <StatementComponent 
+                                                key={idx} 
+                                                navigation={props.navigation} 
+                                                statement={p}
+                                            />
+                                        )
+
+                                    case "video":
+                                        return (
+                                            <VideoComponent 
+                                                key={idx}
+                                                navigation={props.navigation} 
+                                                video={p}
+                                            />
+                                        )
+
+                                    case "photo":
+                                        return (
+                                            <PhotoComponent 
+                                                key={idx} 
+                                                navigation={props.navigation} 
+                                                photo={p}
+                                            />
+                                        )
+
+                                    case "poll":
+                                        return (
+                                            <PollComponent 
+                                                key={idx} 
+                                                navigation={props.navigation} 
+                                                poll={p}
+                                            />
+                                        )
+                                }
+                            })    
+                        }
                     </View>
                 </View>
             </ScrollView>

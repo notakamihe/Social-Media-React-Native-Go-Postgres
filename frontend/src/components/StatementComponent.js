@@ -11,14 +11,25 @@ const StatementComponent = (props) => {
     const [visible, setVisible] = useState(false)
 
     const [statementUser, setStatementUser] = useState({})
+    const [likes, setLikes] = useState([])
+    const [comments, setComments] = useState([])
 
     useEffect(() => {
-        if (props.statement)
+        if (props.statement) {
             axios.get(axios.defaults.baseURL + `users/${props.statement.post.userid}`).then(res => {
                 setStatementUser(res.data);
             }).catch(err => {
                 console.log(err);
             })
+
+            axios.get(axios.defaults.baseURL + `likes`).then(res => {
+                setLikes(res.data.filter(l => l.postid == props.statement.post_id));
+            })
+
+            axios.get(axios.defaults.baseURL + `comments`).then(res => {
+                setComments(res.data.filter(l => l.postid == props.statement.post_id));
+            })
+        }
     }, [])
 
     const deleteStatement = () => {
@@ -97,7 +108,7 @@ const StatementComponent = (props) => {
                     </Text>
                 </View>
                 <View style={{flexDirection: "row", alignItems: "center", marginHorizontal: 6}}>
-                    <Ionicons name="heart-outline" size={normalize(18)} color="#000"/>
+                    <Ionicons name="thumbs-up-outline" size={normalize(18)} color="#000"/>
                     <Text 
                         style={{
                             marginLeft: normalize(4), 
@@ -106,7 +117,7 @@ const StatementComponent = (props) => {
                             fontSize: normalize(16)
                         }}
                     >
-                        50K
+                        {likes.length}
                     </Text>
                 </View>
                 <View style={{flexDirection: "row", alignItems: "center", marginHorizontal: 6}}>
@@ -119,7 +130,7 @@ const StatementComponent = (props) => {
                             fontSize: normalize(16)
                         }}
                     >
-                        8K
+                        {comments.length}
                     </Text>
                 </View>
                 {

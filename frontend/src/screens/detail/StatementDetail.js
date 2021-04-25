@@ -1,5 +1,5 @@
 import { decode } from 'html-entities';
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { View, Text, TouchableOpacity } from 'react-native'
 import { normalize } from 'react-native-elements'
 import { Avatar } from 'react-native-elements'
@@ -9,14 +9,17 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import moment from "moment"
 import axios from 'axios';
 import { UserContext } from '../../context/UserContext';
+import { CommentComponent } from '../../components';
 
 const StatementDetail = (props) => {
+    const {user, setUser} = useContext(UserContext)
+
     const [statement, setStatement] = useState(props.route.params.statement || {})
     const [statementUser, setStatementUser] = useState({})
-    const [isLiked, setIsLiked] = useState(false)
-    const [isCommentedOn, setIsCommentedOn] = useState(false)
+
+    const [likes, setLikes] = useState([])
+    const [comments, setComments] = useState([])
     const [isFavorited, setIsFavorited] = useState(false)
-    const {user, setUser} = useContext(UserContext)
 
     useEffect(() => {
         const navigationRoutes = props.navigation.dangerouslyGetState().routes
@@ -39,17 +42,23 @@ const StatementDetail = (props) => {
     })
 
     useEffect(() => {
-        if (!props.route.params.statement)
-            props.navigation.goBack()
-
-        setStatement(props.route.params.statement)
-
-        axios.get(axios.defaults.baseURL + `users/${statement.post.userid}`).then(res => {
-            setStatementUser(res.data);
-        }).catch(err => {
-            console.log(err);
+        props.navigation.addListener("focus", () => { 
+            if (!props.route.params.statement)
+                props.navigation.goBack()
+    
+            setStatement(props.route.params.statement)
+    
+            axios.get(axios.defaults.baseURL + `users/${statement.post.userid}`).then(res => {
+                setStatementUser(res.data);
+            }).catch(err => {
+                console.log(err);
+            })
+    
+            getLikes()
+            getFavorite()
+            getComments()
         })
-    }, [props.route.params.statement])
+    }, [props.navigation])
 
     const deleteStatement = () => {
         axios.delete(axios.defaults.baseURL + `posts/${statement.post_id}`).then(res => {
@@ -60,9 +69,89 @@ const StatementDetail = (props) => {
         })
     }
 
+    const getComments = () => {
+        axios.get(axios.defaults.baseURL + "comments").then(res => {
+            let commentsData = res.data.filter(c => c.postid == statement.post_id && c.userid != user.id)
+            const userComment = res.data.find(c => c.postid == statement.post_id && c.userid == user.id)
+
+            if (userComment)
+                commentsData.unshift(userComment)
+                
+            setComments(commentsData)
+        })
+    }
+
+    const getFavorite = () => {
+        axios.get(axios.defaults.baseURL + `favorites/${statement.post_id}/${user.id}`).then(res => {
+            console.log(res.data);
+            setIsFavorited(true)
+        }).catch(err => {
+            setIsFavorited(false)
+        })
+    }
+
+    const getLikes = () => {
+        axios.get(axios.defaults.baseURL + "likes").then(res => {
+            setLikes(res.data ? res.data.filter(l => l.postid == statement.post_id) : []);
+        }).catch(err => {
+            console.log(err);
+        })
+    }
+
+    const isCommentedOn = () => {
+        return comments.map(c => c.userid).includes(user.id)
+    }
+
+    const isLiked = () => {
+        return likes.map(l => l.userid).includes(user.id);
+    }
+
+    const toggleFavorite = () => {
+        if (isFavorited)
+            axios.delete(axios.defaults.baseURL + `favorites/${statement.post_id}/${user.id}`).then(res => {
+                console.log(res.data);
+                getFavorite()
+            }).catch(err => {
+                console.log(err.response.data);
+            })
+        else
+            axios.post(axios.defaults.baseURL + "favorites", {
+                postid: statement.post_id,
+                userid: user.id
+            }).then(res => {
+                console.log(res.data);
+                getFavorite()
+            }).catch(err => {
+                console.log(err);
+            })
+    }
+
+    const toggleLike = () => {
+        console.log(likes);
+
+        if (isLiked())
+            axios.delete(axios.defaults.baseURL + `likes/${statement.post_id}/${user.id}`).then(res => {
+                console.log(res.data);
+                getLikes()
+            }).catch(err => {
+                console.log(err.response.data);
+            })
+        else
+            axios.post(axios.defaults.baseURL + "likes", {
+                postid: statement.post_id,
+                userid: user.id
+            }).then(res => {
+                console.log(res.data);
+                getLikes()
+            }).catch(err => {
+                console.log(err);
+            })
+    }
+
     const viewCommentOrCreate = () => {
-        if (!isCommentedOn)
-            props.navigation.navigate("CreateComment")
+        if (!isCommentedOn()) {
+            props.navigation.navigate("CreateComment", {post: statement, user: statementUser})
+        }
     }
 
     return (
@@ -85,10 +174,10 @@ const StatementDetail = (props) => {
                                         alignItems: "center", 
                                         marginHorizontal: normalize(6)
                                     }}
-                                    onPress={() => setIsLiked(prev => !prev)}
+                                    onPress={() => toggleLike()}
                                 >
-                                    <Ionicons name={isLiked ? "heart" : "heart-outline"} size={normalize(16)}/>
-                                    <Text style={{marginLeft: normalize(4), fontWeight: "bold", fontSize: normalize(16)}}>50K</Text>
+                                    <Ionicons name={isLiked() ? "thumbs-up" : "thumbs-up-outline"} size={normalize(16)}/>
+                                    <Text style={{marginLeft: normalize(4), fontWeight: "bold", fontSize: normalize(16)}}>{likes.length}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
                                     style={{
@@ -98,8 +187,14 @@ const StatementDetail = (props) => {
                                     }}
                                     onPress={() => viewCommentOrCreate()}
                                 >
-                                    <Ionicons name={isCommentedOn ? "chatbox" : "chatbox-outline"} size={normalize(16)}/>
-                                    <Text style={{marginLeft: normalize(4), fontWeight: "bold", fontSize: normalize(16)}}>8K</Text>
+                                    <Ionicons name={isCommentedOn() ? "chatbox" : "chatbox-outline"} size={normalize(16)}/>
+                                    <Text 
+                                        style={{
+                                            marginLeft: normalize(4), fontWeight: "bold", fontSize: normalize(16)
+                                        }}
+                                    >
+                                        {comments.length}
+                                    </Text>
                                 </TouchableOpacity>
                                 <View 
                                     style={{
@@ -129,7 +224,7 @@ const StatementDetail = (props) => {
                                         </View> : null
                                     }
                                     <TouchableOpacity 
-                                        onPress={() => setIsFavorited(prev => !prev)} 
+                                        onPress={() => toggleFavorite()} 
                                     >
                                         <Ionicons name={isFavorited ? "star" : "star-outline"} size={normalize(25)} color="#000" />
                                     </TouchableOpacity>
@@ -164,84 +259,23 @@ const StatementDetail = (props) => {
                             {moment(statement.post.createdon).format("MMM DD, YYYY")}
                         </Text>
                     </View>
-                    <View style={{alignItems: "center", paddingVertical: normalize(16), width: "100%"}}>
-                        <View 
-                            style={{
-                                flexDirection: "row",
-                                borderColor: "#000",
-                                borderWidth: 1,
-                                borderRadius: 5,
-                                padding: 8,
-                                marginVertical: normalize(8),
-                                width: "100%"
-                            }}
-                        >
-                            <View style={{alignItems: "center"}}>
-                                <Avatar
-                                    source={require("./../../../assets/images/defaultpfp.png")}
-                                    rounded
-                                />
-                                <View style={{flexDirection: "row", marginTop: "auto"}}>
-                                    <TouchableOpacity onPress={() => props.navigation.navigate("EditComment")}>
-                                        <Ionicons name="create-outline" size={normalize(20)} />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity>
-                                        <Ionicons name="trash-outline" size={normalize(20)} />
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                            <View style={{marginLeft: 16, flexShrink: 1}}>
-                                <Text style={{fontSize: normalize(12), fontWeight: "bold"}}>
-                                    johndoeisgreat {decode("&#183")} 5/2/17
-                                </Text>
-                                <Text 
-                                    style={{
-                                        backgroundColor: "#00000015", 
-                                        padding: normalize(8),
-                                        borderRadius: normalize(5),
-                                        marginTop: normalize(8),
-                                        flexShrink: 1,
-                                        fontSize: normalize(14)
-                                    }}
-                                >
-                                    Lorem ipsum, ipsum lorem
-                                </Text>
-                            </View>
+                    <ScrollView>
+                        <View style={{alignItems: "center", paddingVertical: normalize(16), width: "100%"}}>
+                            {
+                                comments.map((c, idx) => (
+                                    <CommentComponent 
+                                        key={idx} 
+                                        comment={c} 
+                                        readOnly={c && c.userid == user.id} 
+                                        navigation={props.navigation}
+                                        getComments={getComments}
+                                        post={statement}
+                                        user={statementUser}
+                                    />
+                                ))
+                            }
                         </View>
-                        <View 
-                            style={{
-                                flexDirection: "row",
-                                borderColor: "#000",
-                                borderWidth: 1,
-                                borderRadius: 5,
-                                padding: normalize(8),
-                                marginVertical: normalize(8),
-                                width: "100%"
-                            }}
-                        >
-                            <Avatar
-                                source={require("./../../../assets/images/defaultpfp.png")}
-                                rounded
-                            />
-                            <View style={{marginLeft: 16, flexShrink: 1}}>
-                                <Text style={{fontSize: normalize(12), fontWeight: "bold"}}>
-                                    johndoeisgreat {decode("&#183")} 5/2/17
-                                </Text>
-                                <Text 
-                                    style={{
-                                        backgroundColor: "#00000015", 
-                                        padding: normalize(8),
-                                        borderRadius: normalize(5),
-                                        marginTop: normalize(8),
-                                        flexShrink: 1,
-                                        fontSize: normalize(14)
-                                    }}
-                                >
-                                    Lorem ipsum, ipsum lorem
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
+                    </ScrollView>
                 </View>
             </ScrollView>
         </SafeAreaView>

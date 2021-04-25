@@ -1,3 +1,4 @@
+import axios from 'axios'
 import React, { useEffect, useRef, useState } from 'react'
 import { View, Text } from 'react-native'
 import { Avatar } from 'react-native-elements'
@@ -7,24 +8,31 @@ import FormError from '../../../components/FormError'
 import { normalize } from '../../../utils/utils'
 
 const EditComment = (props) => {
-    const [content, setContent] = useState("")
+    const [post, setPost] = useState(props.route.params.post)
+    const [postUser, setPostUser] = useState(props.route.params.user)
+    const [comment, setComment] = useState(props.route.params.comment)
+    const [content, setContent] = useState(comment.content)
     const [error, setError] = useState("")
 
     const errorRef = useRef()
 
-    useEffect(() => {
-        setContent("Amet a nec senectus suspendisse a elit proin nec a condimentum fusce pulvinar a et tristique curabitur ullamcorper sem iaculis enim taciti praesent elementum sapien posuere bibendum faucibus sagittis. Id facilisis dapibus vulputate condimentum parturient nulla sociosqu odio dui ad a a pharetra eu augue molestie sodales euismod condimentum dignissim himenaeos adipiscing a sem adipiscing.")
-    })
-
-    useEffect(() => {
-        if (error)
-            errorRef.current.scrollToEnd({animated: true})
-    }, [error])
-
     const editComment = () => {
-        console.log(content);
-        setError("This is an error")
-        //props.navigation.goBack()
+        setError("")
+
+        if (!content) {
+            setError("Comment must not be blank.")
+            errorRef.current.scrollToEnd({animated: true})
+            return
+        }
+
+        axios.put(axios.defaults.baseURL + `comments/${comment.postid}/${comment.userid}`, {
+            content
+        }).then(res => {
+            console.log(res.data);
+            props.navigation.goBack()
+        }).catch(err => {
+            console.log(err);
+        })
     }
 
     return (
@@ -37,7 +45,9 @@ const EditComment = (props) => {
                             rounded
                             size={normalize(32)}
                         />
-                        <Text style={{marginLeft: normalize(16), fontSize: normalize(16)}}>johndoeisgreat</Text>
+                        <Text style={{marginLeft: normalize(16), fontSize: normalize(16)}}>
+                            {postUser.username}
+                        </Text>
                     </View>
                     <Text 
                         style={{
@@ -48,7 +58,7 @@ const EditComment = (props) => {
                             marginHorizontal: normalize(16)
                         }}
                     >
-                        This will be the placeholder of this video.
+                        {post.post.category == "statement" ? post.content : post.title}
                     </Text>
                     <TextInput 
                         multiline

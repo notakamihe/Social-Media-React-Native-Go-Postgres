@@ -10,6 +10,7 @@ import Video from "react-native-video"
 import moment from "moment"
 import axios from 'axios';
 import { UserContext } from "./../../context/UserContext";
+import { CommentComponent } from '../../components';
 
 const VideoDetail = (props) => {
     const {user, setUser} = useContext(UserContext)
@@ -21,9 +22,10 @@ const VideoDetail = (props) => {
     const [showThumbnail, setShowThumbnail] = useState(false)
     const [showComments, setShowComments] = useState(false)
 
+    const [views, setViews] = useState(0)
     const [likes, setLikes] = useState([])
+    const [comments, setComments] = useState([])
     const [isFavorited, setIsFavorited] = useState(true)
-    const [isCommentedOn, setIsCommentedOn] = useState(false)
 
     const commentRef = useRef()
 
@@ -48,21 +50,40 @@ const VideoDetail = (props) => {
     })
 
     useEffect(() => {
-        if (!props.route.params.video)
-            props.navigation.goBack()
+        if (video.post.userid != user.id) {
+            axios.put(axios.defaults.baseURL + `videos/${video.post_id}`, {
+                title: video.title,
+                description: video.description,
+                private: video.private,
+                views: video.views + 1
+            }).then(res => {
+                setViews(res.data.views);
+            }).catch(err => {
+                console.log(err);
+            })
+        }
+    }, [])
 
-        axios.get(axios.defaults.baseURL + `users/${video.post.userid}`).then(res => {
-            setVideo(props.route.params.video)
-            setVideoUser(res.data);
-        }).catch(err => {
-            console.log(err);
+    useEffect(() => {
+        props.navigation.addListener("focus", () => {
+            if (!props.route.params.video)
+                props.navigation.goBack()
+    
+            axios.get(axios.defaults.baseURL + `users/${video.post.userid}`).then(res => {
+                setVideo(props.route.params.video)
+                setVideoUser(res.data);
+            }).catch(err => {
+                console.log(err);
+            })
+    
+            getLikes()
+            getFavorite()
+            getComments()
+    
+            setShowThumbnail(false)
         })
 
-        getLikes()
-        getFavorite()
-
-        setShowThumbnail(false)
-    }, [props.route.params.video])
+    }, [props.navigation, props.route.params.video])
 
     const deleteVideo = () => {
         axios.delete(axios.defaults.baseURL + `posts/${video.post_id}`).then(res => {
@@ -70,6 +91,20 @@ const VideoDetail = (props) => {
             props.navigation.navigate("Tabs")
         }).catch(err => {
             console.log(err);
+        })
+    }
+
+    const getComments = () => {
+        setShowComments(false)
+
+        axios.get(axios.defaults.baseURL + "comments").then(res => {
+            let commentsData = res.data.filter(c => c.postid == video.post_id && c.userid != user.id)
+            const userComment = res.data.find(c => c.postid == video.post_id && c.userid == user.id)
+
+            if (userComment)
+                commentsData.unshift(userComment)
+                
+            setComments(commentsData)
         })
     }
 
@@ -130,16 +165,20 @@ const VideoDetail = (props) => {
             })
     }
 
+    const isCommentedOn = () => {
+        return comments.map(c => c.userid).includes(user.id)
+    }
+
     const isLiked = () => {
         return likes.map(l => l.userid).includes(user.id);
     }
 
     const viewCommentOrCreate = () => {
-        if (isCommentedOn) {
+        if (isCommentedOn()) {
             setShowComments(true)
             commentRef.current.scrollTo({x: 0, y: 0, animated: true})
         } else {
-            props.navigation.navigate("CreateComment")
+            props.navigation.navigate("CreateComment", {post: video, user: videoUser})
         }
     }
 
@@ -150,7 +189,7 @@ const VideoDetail = (props) => {
                     <View style={{width: "100%", marginTop: normalize(16)}}>
                         <View style={{width: "100%"}}>
                             <Ionicons 
-                                name={video.private ? "lock-closed" : "lock-open"} 
+                                name={video.private ? "lock-closed" : "lock-open-outline"} 
                                 size={normalize(15)} 
                                 color="#000"
                                 style={{alignSelf: "center", marginBottom: normalize(8)}}
@@ -254,7 +293,7 @@ const VideoDetail = (props) => {
                                             fontSize: normalize(16)
                                         }}
                                     >
-                                        700K
+                                        {views}
                                     </Text>
                                 </View>
                                 <TouchableOpacity 
@@ -284,7 +323,7 @@ const VideoDetail = (props) => {
                                     }}
                                     onPress={() => viewCommentOrCreate()}
                                 >
-                                    <Ionicons name={isCommentedOn ? "chatbox" : "chatbox-outline"} size={normalize(16)}/>
+                                    <Ionicons name={isCommentedOn() ? "chatbox" : "chatbox-outline"} size={normalize(16)}/>
                                     <Text 
                                         style={{
                                             marginLeft: normalize(4), 
@@ -292,7 +331,7 @@ const VideoDetail = (props) => {
                                             fontSize: normalize(16)
                                         }}
                                     >
-                                        8K
+                                        {comments.length}
                                     </Text>
                                 </TouchableOpacity>
                             </View>
@@ -330,126 +369,73 @@ const VideoDetail = (props) => {
                     </View>
                 </ScrollView>
             </View>
-            <View style={{flex: showComments ? 6 : 1}}>
-                {
-                    showComments ? null :
-                    
-                    <View style={{flexDirection: "row", justifyContent: "center", height: "100%"}}>
+            {
+                comments.length || video.thumbnailurl ?
+
+                <View style={{flex: showComments ? 6 : 1}}>
+                    {
+                        showComments ? null :
+                        
+                        <View style={{flexDirection: "row", justifyContent: "center", height: "100%"}}>
+                            {
+                                comments.length ? 
+
+                                <TouchableOpacity 
+                                    style={{justifyContent: "center", alignItems: "center", height: "100%", flex: 1}}
+                                    onPress={() => setShowComments(prev => !prev)}
+                                >
+                                    <Text style={{fontWeight: "bold", fontSize: normalize(16)}}>
+                                        Show {comments.length} comments
+                                    </Text>
+                                </TouchableOpacity> : null
+                            }
+                            {
+                                video.thumbnailurl ?
+
+                                <TouchableOpacity 
+                                    style={{justifyContent: "center", alignItems: "center", height: "100%", flex: 1}}
+                                    onPress={() => setShowThumbnail(prev => !prev)}
+                                >
+                                    <Text style={{fontWeight: "bold", fontSize: normalize(16)}}>Show thumbnail</Text>
+                                </TouchableOpacity> : null
+                            }
+                        </View>
+                    }
+
+                    {
+                        showComments ? 
                         <TouchableOpacity 
-                            style={{justifyContent: "center", alignItems: "center", height: "100%", flex: 1}}
-                            onPress={() => setShowComments(prev => !prev)}
-                        >
-                            <Text style={{fontWeight: "bold", fontSize: normalize(16)}}>Show comments</Text>
-                        </TouchableOpacity>
-                        {
-                            video.thumbnailurl ?
-
-                            <TouchableOpacity 
-                                style={{justifyContent: "center", alignItems: "center", height: "100%", flex: 1}}
-                                onPress={() => setShowThumbnail(prev => !prev)}
-                            >
-                                <Text style={{fontWeight: "bold", fontSize: normalize(16)}}>Show thumbnail</Text>
-                            </TouchableOpacity> : null
-                        }
-                    </View>
-                }
-
-                {
-                    showComments ? 
-                    <TouchableOpacity 
-                        onPress={() => setShowComments(prev => !prev)} 
-                        style={{
-                            position: "absolute",
-                            top: normalize(0),
-                            right: normalize(0),
-                            zIndex: 300
-                        }}
-                    >
-                        <Ionicons name="close-circle" size={30} color="#0003" />
-                    </TouchableOpacity> : null
-                }
-
-                <ScrollView ref={commentRef}>
-                    <View style={{alignItems: "center", paddingVertical: normalize(16)}}>
-                        <View 
+                            onPress={() => setShowComments(prev => !prev)} 
                             style={{
-                                flexDirection: "row",
-                                borderColor: "#000",
-                                borderWidth: 1,
-                                width: "90%",
-                                borderRadius: 5,
-                                padding: 8,
-                                marginVertical: normalize(8)
+                                position: "absolute",
+                                top: normalize(0),
+                                right: normalize(0),
+                                zIndex: 300
                             }}
                         >
-                            <View style={{alignItems: "center"}}>
-                                <Avatar
-                                    source={require("./../../../assets/images/defaultpfp.png")}
-                                    rounded
-                                />
-                                <View style={{flexDirection: "row", marginTop: "auto"}}>
-                                    <TouchableOpacity onPress={() => props.navigation.navigate("EditComment")}>
-                                        <Ionicons name="create-outline" size={normalize(20)} />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity>
-                                        <Ionicons name="trash-outline" size={normalize(20)} />
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                            <View style={{marginLeft: 16, flexShrink: 1}}>
-                                <Text style={{fontSize: normalize(12), fontWeight: "bold"}}>
-                                    johndoeisgreat {decode("&#183")} 4/18/17
-                                </Text>
-                                <Text 
-                                    style={{
-                                        backgroundColor: "#00000015", 
-                                        padding: normalize(8),
-                                        borderRadius: normalize(5),
-                                        marginTop: normalize(8),
-                                        flexShrink: 1,
-                                        fontSize: normalize(14)
-                                    }}
-                                >
-                                    Lorem ipsum, ipsum lorem
-                                </Text>
-                            </View>
+                            <Ionicons name="close-circle" size={30} color="#0003" />
+                        </TouchableOpacity> : null
+                    }
+
+                    <ScrollView ref={commentRef}>
+                        <View style={{alignItems: "center", paddingVertical: normalize(16)}}>
+                            {
+                                comments.map((c, idx) => (
+                                    <CommentComponent 
+                                        key={idx} 
+                                        comment={c} 
+                                        readOnly={c && c.userid == user.id} 
+                                        navigation={props.navigation}
+                                        getComments={getComments}
+                                        post={video}
+                                        user={videoUser}
+                                    />
+                                ))
+                            }
                         </View>
-                        <View 
-                            style={{
-                                flexDirection: "row",
-                                borderColor: "#000",
-                                borderWidth: 1,
-                                width: "90%",
-                                borderRadius: 5,
-                                padding: normalize(8),
-                                marginVertical: normalize(8)
-                            }}
-                        >
-                            <Avatar
-                                source={require("./../../../assets/images/defaultpfp.png")}
-                                rounded
-                            />
-                            <View style={{marginLeft: 16, flexShrink: 1}}>
-                                <Text style={{fontSize: normalize(12), fontWeight: "bold"}}>
-                                    johndoeisgreat {decode("&#183")} 4/18/17
-                                </Text>
-                                <Text 
-                                    style={{
-                                        backgroundColor: "#00000015", 
-                                        padding: normalize(8),
-                                        borderRadius: normalize(5),
-                                        marginTop: normalize(8),
-                                        flexShrink: 1,
-                                        fontSize: normalize(14)
-                                    }}
-                                >
-                                    Lorem ipsum, ipsum lorem
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
-                </ScrollView>
-            </View>
+                    </ScrollView>
+                </View> : null
+            }
         </SafeAreaView>
         
     )
